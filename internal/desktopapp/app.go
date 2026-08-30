@@ -329,19 +329,19 @@ func (a *application) showDetails() {
 	detailsWindow := a.app.NewWindow("Details")
 	detailsWindow.Resize(fyne.NewSize(760, 560))
 
-	detailsText := widget.NewMultiLineEntry()
-	detailsText.Disable()
-	detailsText.SetMinRowsVisible(20)
-	detailsText.SetText(a.detailsText())
+	detailsText := widget.NewTextGridFromString(a.detailsText())
 
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		detailsText.SetText(a.detailsText())
+	})
+	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
+		a.app.Clipboard().SetContent(detailsText.Text())
 	})
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
 	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 
 	detailsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, settingsButton, logsButton, layout.NewSpacer()),
+		container.NewHBox(refreshButton, copyButton, settingsButton, logsButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,
@@ -385,6 +385,22 @@ func (a *application) detailsText() string {
 		"  GET /ping",
 		"  GET /status?host=<printer_host>&port=<printer_port>",
 		"  POST /print",
+		"",
+		"Help",
+		"  Browser app cannot connect:",
+		"    Add the calling web app origin in Settings.",
+		"    Use scheme + host + optional port only, with no path.",
+		"    Example: http://localhost:3000 or https://app.example.com",
+		"  Listener check:",
+		"    Open http://" + status.Address + "/ping",
+		"  Printer reachability check:",
+		"    Open http://" + status.Address + "/status?host=<printer_host>&port=<printer_port>",
+		"  Print request requirements:",
+		"    POST /print with printerHostname and text.",
+		"    printerPort is optional; if omitted, the default printer port is used.",
+		"  If printing fails:",
+		"    Confirm the printer address, printer port, network, VPN, and firewall.",
+		"    Use View Logs or Copy from this window when asking for help.",
 		"",
 		"Timeouts",
 		"  TCP connect timeout: " + server.DefaultConnectTimeout.String(),

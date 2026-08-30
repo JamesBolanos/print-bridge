@@ -51,7 +51,7 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 
 ### 3. Details
 
-Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view:
+Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view with normal foreground contrast. This screen doubles as the basic support/help view, so the content should be easy to copy and send to someone troubleshooting an installation.
 
 - App name and app ID.
 - Listener running/stopped state, listener address, HTTP port, and last listener error.
@@ -60,6 +60,13 @@ Opened from the main window. Displays all user-relevant runtime/configuration in
 - Config file path and log file path.
 - API endpoints.
 - TCP timeout values and log rotation policy.
+- Help prompts for the most common issues: adding the calling web app origin, checking `/ping`, checking printer reachability with `/status`, confirming print request fields, and checking logs.
+
+**Controls:**
+- Refresh
+- Copy
+- Settings
+- View Logs
 
 ### 4. Logs viewer
 
