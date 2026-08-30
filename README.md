@@ -54,6 +54,14 @@ Requirements:
 - Go `1.24+`
 - macOS or Windows for the desktop app
 
+Linux and GitHub Codespaces can build the app, but Fyne/GLFW needs native GUI
+headers:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols
+```
+
 Run tests:
 
 ```bash

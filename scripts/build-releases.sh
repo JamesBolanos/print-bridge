@@ -8,6 +8,37 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_NAME="printer-bridge"
 
+if [[ "$(uname -s)" == "Linux" ]]; then
+  missing_linux_deps=()
+
+  if ! command -v pkg-config >/dev/null 2>&1; then
+    missing_linux_deps+=("pkg-config")
+  else
+    for pkg in gl wayland-client xkbcommon; do
+      if ! pkg-config --exists "$pkg"; then
+        missing_linux_deps+=("$pkg")
+      fi
+    done
+  fi
+
+  if ((${#missing_linux_deps[@]} > 0)); then
+    cat <<'EOF'
+Missing native Linux build dependencies for Fyne/GLFW.
+
+On Ubuntu, Debian, or GitHub Codespaces, install them with:
+
+  sudo apt-get update
+  sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols
+
+Then rerun:
+
+  ./scripts/build-releases.sh
+
+EOF
+    exit 1
+  fi
+fi
+
 mkdir -p "$DIST_DIR"
 rm -f "$DIST_DIR"/*
 

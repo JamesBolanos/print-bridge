@@ -13,6 +13,13 @@ Requirements:
 - `golangci-lint` for lint checks
 - macOS or Windows to run the desktop UI locally
 
+On Linux or GitHub Codespaces, install Fyne/GLFW native build dependencies:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols
+```
+
 Useful commands:
 
 ```bash
