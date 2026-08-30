@@ -3,9 +3,6 @@ package desktopapp
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +37,7 @@ type application struct {
 	infoLabel    *widget.Label
 	messageLabel *widget.Label
 	closeNotice  bool
-	stopRefresh  chan struct{}
+	stopUpdates  chan struct{}
 }
 
 func Run() error {
@@ -79,7 +76,7 @@ func Run() error {
 		cfg:         cfg,
 		server:      bridgeServer,
 		logger:      logger,
-		stopRefresh: make(chan struct{}),
+		stopUpdates: make(chan struct{}),
 	}
 
 	ui.window = fyneApp.NewWindow(config.AppDisplayName)
@@ -93,10 +90,10 @@ func Run() error {
 	}
 	ui.updateStatus()
 	ui.setupTray()
-	ui.runRefreshLoop()
+	ui.runStatusLoop()
 
 	ui.window.ShowAndRun()
-	close(ui.stopRefresh)
+	close(ui.stopUpdates)
 	return nil
 }
 
@@ -325,20 +322,7 @@ func (a *application) showDetails() {
 
 	detailsText := widget.NewTextGridFromString(a.detailsText())
 
-	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
-		detailsText.SetText(a.detailsText())
-	})
-	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
-		a.app.Clipboard().SetContent(detailsText.Text())
-	})
-
-	detailsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, copyButton, layout.NewSpacer()),
-		nil,
-		nil,
-		nil,
-		detailsText,
-	)))
+	detailsWindow.SetContent(container.NewPadded(detailsText))
 	detailsWindow.Show()
 }
 
@@ -392,21 +376,10 @@ func (a *application) showHelp() {
 	helpWindow := a.app.NewWindow("Help")
 	helpWindow.Resize(fyne.NewSize(720, 560))
 
-	helpText := a.helpText()
-	helpContent := widget.NewRichTextFromMarkdown(helpText)
+	helpContent := widget.NewRichTextFromMarkdown(a.helpText())
 	helpContent.Wrapping = fyne.TextWrapWord
 
-	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
-		a.app.Clipboard().SetContent(helpText)
-	})
-
-	helpWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(copyButton, layout.NewSpacer()),
-		nil,
-		nil,
-		nil,
-		container.NewVScroll(helpContent),
-	)))
+	helpWindow.SetContent(container.NewPadded(container.NewVScroll(helpContent)))
 	helpWindow.Show()
 }
 
@@ -444,7 +417,7 @@ func (a *application) helpText() string {
 		"- Allowed origins: " + displayOriginsForHelp(a.cfg.AllowedOrigins),
 		"",
 		"## When Asking For Help",
-		"- Open Details and use Copy when someone asks for technical information.",
+		"- Open Details when someone asks for technical information.",
 		"- Open View Logs to see recent connection or printing errors.",
 		"",
 		"## Support And Feedback",
@@ -556,15 +529,6 @@ func (a *application) showLogs() {
 		logText.SetText("Live log view - newest entries first\n\n" + strings.Join(lines, "\n"))
 	}
 
-	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
-		a.app.Clipboard().SetContent(logText.Text())
-	})
-	revealButton := widget.NewButtonWithIcon("Reveal", theme.FolderOpenIcon(), func() {
-		if err := revealFile(a.logger.Path()); err != nil {
-			logText.SetText("Unable to reveal log file: " + err.Error())
-		}
-	})
-
 	loadLogs()
 	stopLogs := make(chan struct{})
 	logsWindow.SetOnClosed(func() {
@@ -581,35 +545,14 @@ func (a *application) showLogs() {
 				fyne.Do(loadLogs)
 			case <-stopLogs:
 				return
-			case <-a.stopRefresh:
+			case <-a.stopUpdates:
 				return
 			}
 		}
 	}()
 
-	logsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(copyButton, revealButton, layout.NewSpacer()),
-		nil,
-		nil,
-		nil,
-		logText,
-	)))
+	logsWindow.SetContent(container.NewPadded(logText))
 	logsWindow.Show()
-}
-
-func revealFile(path string) error {
-	if path == "" {
-		return fmt.Errorf("log file path is empty")
-	}
-
-	switch runtime.GOOS {
-	case "darwin":
-		return exec.Command("open", "-R", path).Start()
-	case "windows":
-		return exec.Command("explorer", "/select,"+path).Start()
-	default:
-		return exec.Command("xdg-open", filepath.Dir(path)).Start()
-	}
 }
 
 func (a *application) quit() {
@@ -619,7 +562,7 @@ func (a *application) quit() {
 	a.app.Quit()
 }
 
-func (a *application) runRefreshLoop() {
+func (a *application) runStatusLoop() {
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
@@ -630,7 +573,7 @@ func (a *application) runRefreshLoop() {
 				fyne.Do(func() {
 					a.updateStatus()
 				})
-			case <-a.stopRefresh:
+			case <-a.stopUpdates:
 				return
 			}
 		}

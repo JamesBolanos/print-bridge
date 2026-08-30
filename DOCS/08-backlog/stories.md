@@ -80,9 +80,8 @@ As a user, I want to change ports and allowed origins and have them take effect 
 **S3.5 — Logs viewer**
 As a user, I want to view recent activity from within the app, so that I can self-diagnose a failed print without hunting for a file on disk.
 - AC: Logs screen displays the current rotating log file's contents, most recent entries first.
-- AC: Logs screen updates automatically while open; no manual Refresh button is required.
-- AC: Copy button copies the visible log text.
-- AC: "Reveal in Finder/Explorer" button opens the platform file browser at the log file's location.
+- AC: Logs screen updates automatically while open.
+- AC: Logs screen has no in-window action buttons.
 
 ---
 

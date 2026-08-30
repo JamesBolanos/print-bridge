@@ -58,7 +58,7 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 
 ### 3. Details
 
-Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view with normal foreground contrast. This screen is the diagnostic/support bundle, so the content should be easy to copy and send to someone troubleshooting an installation.
+Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view with normal foreground contrast. This screen is the diagnostic/support bundle, so the content should be easy to read when troubleshooting an installation.
 
 - App name and app ID.
 - Listener running/stopped state, listener address, HTTP port, and last listener error.
@@ -67,10 +67,6 @@ Opened from the main window. Displays all user-relevant runtime/configuration in
 - Config file path and log file path.
 - API endpoints.
 - TCP timeout values and log rotation policy.
-
-**Controls:**
-- Refresh
-- Copy
 
 ### 4. Help
 
@@ -83,20 +79,15 @@ Opened from the main window or tray/menu bar. Help is a first-class screen, sepa
 - Printer IP address or hostname guidance.
 - Printer port guidance.
 - Allowed origin guidance using website-address language, including that an allowed origin is different from the printer IP address.
-- Common failure checks: printer power/network, exact origin match, printer address/port, VPN, firewall, logs, and diagnostic Details copy.
+- Common failure checks: printer power/network, exact origin match, printer address/port, VPN, firewall, logs, and the Details screen.
 - Support and feedback note with Jaime Bolaños, `https://jbolanos.dev`, and GitHub: `https://github.com/JamesBolanos`. Tone should be helpful and confident, not a sales pitch.
-
-**Controls:**
-- Copy
 
 ### 5. Logs viewer
 
 Opened from the main window. Displays the current rotating log file's contents as a live activity view (see `03-architecture/architecture-overview.md` for rotation policy).
 
 - Read-only normal-contrast text view, most recent entries first, with a clear label that states the order and that the view updates automatically.
-- A "Reveal in Finder/Explorer" button (platform-appropriate) so a technical user or the maintainer, if asked for help, can grab the raw file.
-- A Copy button so the visible log text can be shared for support.
-- No Refresh button; updates happen automatically while the window is open.
+- No in-window action buttons; updates happen automatically while the window is open.
 - No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
 
 ### 6. Tray/menu bar icon

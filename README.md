@@ -62,7 +62,7 @@ Run the app:
 go run .
 ```
 
-The app opens a desktop window, starts the local listener on `127.0.0.1:8080` by default, and keeps running from the tray/menu bar when the main window is hidden. The main window shows the app logo, listener address, default printer address/port, and allowed origins. **Help** gives users setup and troubleshooting guidance, while **Details** shows copyable runtime diagnostics such as config/log paths, endpoints, timeout values, and other technical information.
+The app opens a desktop window, starts the local listener on `127.0.0.1:8080` by default, and keeps running from the tray/menu bar when the main window is hidden. The main window shows the app logo, listener address, default printer address/port, and allowed origins. **Help** gives users setup and troubleshooting guidance, while **Details** shows runtime diagnostics such as config/log paths, endpoints, timeout values, and other technical information.
 
 Build a local binary:
 
