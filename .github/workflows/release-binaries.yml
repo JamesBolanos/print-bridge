@@ -69,7 +69,7 @@ jobs:
             Out-File -FilePath 'dist/SHA256SUMS-windows.txt' -Encoding ascii
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release
           path: |
@@ -128,7 +128,7 @@ jobs:
           shasum -a 256 "${DMG_PATH}" > dist/SHA256SUMS-darwin.txt
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release
           path: |
