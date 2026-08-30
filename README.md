@@ -124,6 +124,12 @@ New installs start with an empty CORS allow-list:
 
 Add only the web app origins this installation needs from the Settings screen. For example, a local development app might add `http://localhost:3000`, while a deployed app might add `https://app.example.com`. With an empty list, browser-based callers cannot use the API until an origin is added; non-browser local tools such as `curl` are not governed by CORS.
 
+## Support And Feedback
+
+`printer-bridge` is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.
+
+If `printer-bridge` saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos).
+
 ## Development Roadmap
 
 Completed v1 foundation:

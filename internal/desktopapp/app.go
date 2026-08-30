@@ -454,6 +454,11 @@ func (a *application) helpText() string {
 		"## When Asking For Help",
 		"- Open Details and use Copy when someone asks for technical information.",
 		"- Open View Logs to see recent connection or printing errors.",
+		"",
+		"## Support And Feedback",
+		"printer-bridge is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.",
+		"",
+		"If printer-bridge saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos)",
 	}, "\n")
 }
 

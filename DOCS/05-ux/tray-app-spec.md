@@ -83,6 +83,7 @@ Opened from the main window or tray/menu bar. Help is a first-class screen, sepa
 - Printer port guidance.
 - Allowed origin guidance using website-address language, including that an allowed origin is different from the printer IP address.
 - Common failure checks: printer power/network, exact origin match, printer address/port, VPN, firewall, logs, and diagnostic Details copy.
+- Support and feedback note with Jaime Bolaños, `https://jbolanos.dev`, and GitHub: `https://github.com/JamesBolanos`. Tone should be helpful and confident, not a sales pitch.
 
 **Controls:**
 - Copy
