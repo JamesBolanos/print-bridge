@@ -11,7 +11,13 @@ stateDiagram-v2
     MainWindow --> Minimized: user closes window
     Minimized --> MainWindow: user clicks tray icon
     MainWindow --> Settings: user opens Settings
+    MainWindow --> Details: user opens Details
+    MainWindow --> Help: user opens Help
+    MainWindow --> Logs: user opens View Logs
     Settings --> MainWindow: user saves or cancels
+    Details --> MainWindow: user closes Details
+    Help --> MainWindow: user closes Help
+    Logs --> MainWindow: user closes Logs
     MainWindow --> [*]: user clicks Quit
     Minimized --> [*]: user clicks Quit from tray menu
 ```
@@ -27,7 +33,7 @@ The default view when the app is open.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
 - Runtime details: listener address, default printer address/port, and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings.
 - Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
-- Buttons/links: **Settings**, **Details**, **View Logs**, **Quit**
+- Buttons/links: **Settings**, **Details**, **Help**, **View Logs**, **Quit**
 - Recent activity: a short live-updating list of the last few requests (timestamp, endpoint, outcome) — a lightweight in-window view of the same data written to the log file. Not a full log viewer; see "View Logs" below for that.
 
 **Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("printer-bridge is still running in the tray") so the user isn't confused about whether the app exited.
@@ -51,7 +57,7 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 
 ### 3. Details
 
-Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view with normal foreground contrast. This screen doubles as the basic support/help view, so the content should be easy to copy and send to someone troubleshooting an installation.
+Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view with normal foreground contrast. This screen is the diagnostic/support bundle, so the content should be easy to copy and send to someone troubleshooting an installation.
 
 - App name and app ID.
 - Listener running/stopped state, listener address, HTTP port, and last listener error.
@@ -59,16 +65,35 @@ Opened from the main window. Displays all user-relevant runtime/configuration in
 - Allowed CORS origins.
 - Config file path and log file path.
 - API endpoints.
+- Support prompt pointing users to Help and explaining that Details can be copied for diagnostics.
 - TCP timeout values and log rotation policy.
-- Help prompts for the most common issues: adding the calling web app origin, checking `/ping`, checking printer reachability with `/status`, confirming print request fields, and checking logs.
 
 **Controls:**
 - Refresh
 - Copy
 - Settings
+- Help
 - View Logs
 
-### 4. Logs viewer
+### 4. Help
+
+Opened from the main window or tray/menu bar. Help is a first-class screen, separate from Details, focused on setup and troubleshooting instead of raw diagnostics.
+
+**Contents:**
+- Current listener, default printer address/port, and allowed-origin summary.
+- How to add the calling web app origin in Settings.
+- Listener test using `/ping`.
+- Printer reachability test using `/status`.
+- Print request requirements for `/print`.
+- Common failure checks: exact origin match, printer address/port, network, VPN, firewall, logs, and diagnostic Details copy.
+
+**Controls:**
+- Copy
+- Settings
+- Details
+- View Logs
+
+### 5. Logs viewer
 
 Opened from the main window. Displays the current rotating log file's contents (see `03-architecture/architecture-overview.md` for rotation policy).
 
@@ -76,7 +101,7 @@ Opened from the main window. Displays the current rotating log file's contents (
 - A "Reveal in Finder/Explorer" button (platform-appropriate) so a technical user or the maintainer, if asked for help, can grab the raw file.
 - No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
 
-### 5. Tray/menu bar icon
+### 6. Tray/menu bar icon
 
 Persistent while the app is running (whether the main window is open or minimized).
 
@@ -85,6 +110,7 @@ Persistent while the app is running (whether the main window is open or minimize
 **Right-click menu (or platform-equivalent):**
 - Open printer-bridge (same as click)
 - Details
+- Help
 - Status: shows a non-interactive line, e.g. "HTTP: 127.0.0.1:8080" or "Stopped" if the listener failed to start
 - Default printer port
 - Allowed origin count

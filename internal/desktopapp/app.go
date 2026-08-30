@@ -126,9 +126,10 @@ func (a *application) mainContent() fyne.CanvasObject {
 
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
 	detailsButton := widget.NewButtonWithIcon("Details", theme.InfoIcon(), a.showDetails)
+	helpButton := widget.NewButtonWithIcon("Help", theme.HelpIcon(), a.showHelp)
 	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 	quitButton := widget.NewButtonWithIcon("Quit", theme.CancelIcon(), a.quit)
-	actions := container.NewHBox(settingsButton, detailsButton, logsButton, layout.NewSpacer(), quitButton)
+	actions := container.NewHBox(settingsButton, detailsButton, helpButton, logsButton, layout.NewSpacer(), quitButton)
 
 	a.activityList = widget.NewList(
 		func() int {
@@ -200,6 +201,7 @@ func (a *application) updateTrayMenu() {
 			a.window.Show()
 		}),
 		fyne.NewMenuItem("Details", a.showDetails),
+		fyne.NewMenuItem("Help", a.showHelp),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem(statusText, nil),
 		fyne.NewMenuItem("Printer port: "+strconv.Itoa(a.cfg.DefaultPrinterPort), nil),
@@ -338,10 +340,11 @@ func (a *application) showDetails() {
 		a.app.Clipboard().SetContent(detailsText.Text())
 	})
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
+	helpButton := widget.NewButtonWithIcon("Help", theme.HelpIcon(), a.showHelp)
 	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 
 	detailsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, copyButton, settingsButton, logsButton, layout.NewSpacer()),
+		container.NewHBox(refreshButton, copyButton, settingsButton, helpButton, logsButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,
@@ -386,21 +389,9 @@ func (a *application) detailsText() string {
 		"  GET /status?host=<printer_host>&port=<printer_port>",
 		"  POST /print",
 		"",
-		"Help",
-		"  Browser app cannot connect:",
-		"    Add the calling web app origin in Settings.",
-		"    Use scheme + host + optional port only, with no path.",
-		"    Example: http://localhost:3000 or https://app.example.com",
-		"  Listener check:",
-		"    Open http://" + status.Address + "/ping",
-		"  Printer reachability check:",
-		"    Open http://" + status.Address + "/status?host=<printer_host>&port=<printer_port>",
-		"  Print request requirements:",
-		"    POST /print with printerHostname and text.",
-		"    printerPort is optional; if omitted, the default printer port is used.",
-		"  If printing fails:",
-		"    Confirm the printer address, printer port, network, VPN, and firewall.",
-		"    Use View Logs or Copy from this window when asking for help.",
+		"Support",
+		"  Open Help for setup and troubleshooting steps.",
+		"  Use Copy to share this diagnostic information when asking for help.",
 		"",
 		"Timeouts",
 		"  TCP connect timeout: " + server.DefaultConnectTimeout.String(),
@@ -410,6 +401,83 @@ func (a *application) detailsText() string {
 		"  Max log file size: 5 MB",
 		"  Retained rotated log files: 3",
 	}, "\n")
+}
+
+func (a *application) showHelp() {
+	helpWindow := a.app.NewWindow("Help")
+	helpWindow.Resize(fyne.NewSize(720, 560))
+
+	helpText := a.helpText()
+	helpContent := widget.NewRichTextFromMarkdown(helpText)
+	helpContent.Wrapping = fyne.TextWrapWord
+
+	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
+		a.app.Clipboard().SetContent(helpText)
+	})
+	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
+	detailsButton := widget.NewButtonWithIcon("Details", theme.InfoIcon(), a.showDetails)
+	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
+
+	helpWindow.SetContent(container.NewPadded(container.NewBorder(
+		container.NewHBox(copyButton, settingsButton, detailsButton, logsButton, layout.NewSpacer()),
+		nil,
+		nil,
+		nil,
+		container.NewVScroll(helpContent),
+	)))
+	helpWindow.Show()
+}
+
+func (a *application) helpText() string {
+	listener := a.listenerAddress()
+
+	return strings.Join([]string{
+		"# Help",
+		"",
+		"## Current Setup",
+		"- Listener: `http://" + listener + "`",
+		"- Default printer address: `" + displayValue(a.cfg.DefaultPrinterAddress, "Not set") + "`",
+		"- Default printer port: `" + strconv.Itoa(a.cfg.DefaultPrinterPort) + "`",
+		"- Allowed origins: " + displayOriginsForHelp(a.cfg.AllowedOrigins),
+		"",
+		"## Connect A Browser App",
+		"Open Settings and add the exact origin of the web app that will call printer-bridge. Use scheme, host, and optional port only. Do not include a path.",
+		"",
+		"Examples: `http://localhost:3000`, `http://127.0.0.1:5173`, `https://app.example.com`.",
+		"",
+		"Only add origins you trust. If no origins are configured, browser apps cannot call the API.",
+		"",
+		"## Test The Listener",
+		"Open this URL in a browser:",
+		"",
+		"`http://" + listener + "/ping`",
+		"",
+		"You should receive `{\"message\":\"pong\"}`.",
+		"",
+		"## Check Printer Reachability",
+		"Use the printer IP or hostname and port:",
+		"",
+		"`http://" + listener + "/status?host=<printer_host>&port=<printer_port>`",
+		"",
+		"If the printer port is omitted, printer-bridge uses the default printer port.",
+		"",
+		"## Send A Print Job",
+		"`POST /print` requires `printerHostname` and `text`. `printerPort` is optional. The text is sent directly to the printer without format conversion.",
+		"",
+		"## If Something Fails",
+		"- Browser connection problems usually mean the calling origin is missing or does not exactly match.",
+		"- Printer failures usually mean the printer address, port, network, VPN, or firewall needs checking.",
+		"- Use View Logs for recent request results.",
+		"- Use Details and Copy when sending support information.",
+	}, "\n")
+}
+
+func (a *application) listenerAddress() string {
+	status := a.server.Status()
+	if status.Address != "" {
+		return status.Address
+	}
+	return "127.0.0.1:" + strconv.Itoa(a.cfg.HTTPPort)
 }
 
 func settingsConfig(httpPortText string, printerPortText string, printerAddress string, originsText string) (config.Config, error) {
@@ -467,6 +535,13 @@ func displayOriginsSummary(origins []string) string {
 		return "None configured; add required web app origins in Settings"
 	}
 	return displayOrigins(origins)
+}
+
+func displayOriginsForHelp(origins []string) string {
+	if len(origins) == 0 {
+		return "`None configured`"
+	}
+	return "`" + strings.Join(origins, "`, `") + "`"
 }
 
 func indentLines(lines []string, prefix string, empty string) string {
