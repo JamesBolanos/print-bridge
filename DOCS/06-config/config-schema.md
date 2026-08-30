@@ -20,11 +20,7 @@ Rationale: a plain file, not a database, per the "few moving parts" architectura
   "httpPort": 8080,
   "defaultPrinterPort": 9100,
   "defaultPrinterAddress": "",
-  "allowedOrigins": [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://localhost:5173"
-  ]
+  "allowedOrigins": []
 }
 ```
 
@@ -33,19 +29,17 @@ Rationale: a plain file, not a database, per the "few moving parts" architectura
 | `httpPort` | integer | `8080` | 1024–65535 (avoid requiring elevated privileges for ports below 1024); must not already be in use at listener start |
 | `defaultPrinterPort` | integer | `9100` | 1–65535; pre-fills the `printerPort` field for convenience but does not restrict what a caller can send in a `/print` request — the API itself accepts any port per-request |
 | `defaultPrinterAddress` | string | `""` (empty) | Optional. Free text (IP or hostname). Not validated as reachable at save time — reachability is checked live via `/status`, not enforced here |
-| `allowedOrigins` | array of strings | see below | Each entry must be a valid origin (scheme + host + optional port, no path). At least one entry recommended but not enforced — an empty list means no web app can successfully call the API, which is a valid (if unusual) locked-down state |
+| `allowedOrigins` | array of strings | `[]` | Each entry must be a valid origin (scheme + host + optional port, no path). Empty by default; no browser web app can successfully call the API until the user adds the required origin(s) |
 
 ## Default `allowedOrigins`
 
-Ship with localhost-only defaults so the app is immediately testable without carrying over any beta production origins:
+Ship with no allowed browser origins by default:
 
 ```
-http://localhost
-http://localhost:3000
-http://localhost:5173
+[]
 ```
 
-The user adds their own production web app origin(s) via Settings. Document clearly (in install/onboarding docs, not this file) that **the calling web app's origin must be added here** — this is the single most common integration stumbling block for a CORS-only tool.
+The user adds the origin(s) they actually need via Settings. Examples include local development origins such as `http://localhost:3000` or production origins such as `https://app.example.com`. Document clearly (in install/onboarding docs, not this file) that **the calling web app's origin must be added here** — this is the single most common integration stumbling block for a CORS-only tool.
 
 ## Relationship to the API
 

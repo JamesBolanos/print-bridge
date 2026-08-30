@@ -116,15 +116,13 @@ On first launch, `printer-bridge` creates a local `config.json` file:
 - macOS: `~/Library/Application Support/PrinterBridge/config.json`
 - Windows: `%APPDATA%\PrinterBridge\config.json`
 
-Default allowed origins are localhost-only:
+New installs start with an empty CORS allow-list:
 
 ```text
-http://localhost
-http://localhost:3000
-http://localhost:5173
+[]
 ```
 
-Add production web app origins from the Settings screen.
+Add only the web app origins this installation needs from the Settings screen. For example, a local development app might add `http://localhost:3000`, while a deployed app might add `https://app.example.com`. With an empty list, browser-based callers cannot use the API until an origin is added; non-browser local tools such as `curl` are not governed by CORS.
 
 ## Development Roadmap
 

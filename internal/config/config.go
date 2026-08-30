@@ -20,11 +20,7 @@ const (
 	DefaultPrinterPort = 9100
 )
 
-var DefaultAllowedOrigins = []string{
-	"http://localhost",
-	"http://localhost:3000",
-	"http://localhost:5173",
-}
+var DefaultAllowedOrigins = []string{}
 
 type Config struct {
 	HTTPPort              int      `json:"httpPort"`

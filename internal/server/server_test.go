@@ -31,6 +31,32 @@ func TestPing(t *testing.T) {
 	assert.JSONEq(t, `{"message":"pong"}`, w.Body.String())
 }
 
+func TestEmptyAllowedOriginsDenyBrowserOrigin(t *testing.T) {
+	router := testRouter(t, nil)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestConfiguredAllowedOriginReceivesCORSHeader(t *testing.T) {
+	cfg := config.Default()
+	cfg.AllowedOrigins = []string{"http://localhost:3000"}
+	router := testRouterWithConfig(t, cfg, nil)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "http://localhost:3000", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
 func TestPrintDefaultsToConfiguredPrinterPort(t *testing.T) {
 	conn := &captureConn{}
 	var dialed string
@@ -177,9 +203,14 @@ func TestServerBindsToLocalhost(t *testing.T) {
 
 func testRouter(t *testing.T, dial DialContextFunc) *gin.Engine {
 	t.Helper()
+
+	return testRouterWithConfig(t, config.Default(), dial)
+}
+
+func testRouterWithConfig(t *testing.T, cfg config.Config, dial DialContextFunc) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	cfg := config.Default()
 	opts := Options{Config: cfg, DialContext: dial}
 	return NewRouter(opts)
 }

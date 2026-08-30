@@ -25,7 +25,7 @@ The default view when the app is open.
 **Contents:**
 - App logo, using the project icon asset.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
-- Runtime details: listener address, default printer address/port, and allowed origins.
+- Runtime details: listener address, default printer address/port, and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings.
 - Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
 - Buttons/links: **Settings**, **Details**, **View Logs**, **Quit**
 - Recent activity: a short live-updating list of the last few requests (timestamp, endpoint, outcome) — a lightweight in-window view of the same data written to the log file. Not a full log viewer; see "View Logs" below for that.
@@ -40,7 +40,7 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 - HTTP port (numeric input)
 - Default printer port (numeric input, pre-filled with 9100)
 - Default printer address (optional text input — a convenience default, not a saved profile list; see ADR scope note below)
-- CORS allowed origins (list input — add/remove entries)
+- CORS allowed origins (list input — add/remove entries; empty by default)
 - **Save** and **Cancel** buttons
 
 **Save behavior:**
@@ -89,7 +89,7 @@ Persistent while the app is running (whether the main window is open or minimize
 |---|---|
 | Listener fails to start (e.g. port already in use) | Main window shows a clear error with the specific reason and a shortcut to Settings to change the port. Tray icon still appears (so the user isn't left with no way to reach the app) but its status line reflects "Stopped." |
 | Settings save triggers restart, restart fails | Show the same error pattern as above, inline in the Settings screen, without discarding the user's entered values (so they don't have to retype). |
-| First launch | No special onboarding flow required for v1 — default settings are sensible enough (see `06-config/config-schema.md`) that the main window is usable immediately. |
+| First launch | No special onboarding flow required for v1. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
 
 ## Explicitly out of scope for v1
 

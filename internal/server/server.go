@@ -64,11 +64,7 @@ func NewRouter(opts Options) *gin.Engine {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: opts.Config.AllowedOrigins,
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowHeaders: []string{"Origin", "Content-Type"},
-	}))
+	router.Use(cors.New(corsConfig(opts.Config.AllowedOrigins)))
 
 	router.GET("/ping", func(c *gin.Context) {
 		record(opts, "/ping", "", "success", "pong")
@@ -82,6 +78,22 @@ func NewRouter(opts Options) *gin.Engine {
 	})
 
 	return router
+}
+
+func corsConfig(allowedOrigins []string) cors.Config {
+	cfg := cors.Config{
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions},
+		AllowHeaders: []string{"Origin", "Content-Type"},
+	}
+	if len(allowedOrigins) == 0 {
+		cfg.AllowOriginFunc = func(origin string) bool {
+			return false
+		}
+		return cfg
+	}
+
+	cfg.AllowOrigins = allowedOrigins
+	return cfg
 }
 
 func (s *Server) Start() error {

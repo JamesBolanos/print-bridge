@@ -243,7 +243,7 @@ func (a *application) updateInfo() {
 		listener,
 		a.cfg.DefaultPrinterPort,
 		displayValue(a.cfg.DefaultPrinterAddress, "Not set"),
-		displayOrigins(a.cfg.AllowedOrigins),
+		displayOriginsSummary(a.cfg.AllowedOrigins),
 	))
 	a.infoLabel.Refresh()
 }
@@ -273,7 +273,7 @@ func (a *application) showSettings() {
 	originsEntry := widget.NewMultiLineEntry()
 	originsEntry.SetText(strings.Join(a.cfg.AllowedOrigins, "\n"))
 	originsEntry.SetMinRowsVisible(5)
-	originsEntry.PlaceHolder = "One allowed origin per line"
+	originsEntry.PlaceHolder = "Add required web app origins, one per line"
 
 	errorLabel := widget.NewLabel("")
 	errorLabel.Wrapping = fyne.TextWrapWord
@@ -444,6 +444,13 @@ func displayOrigins(origins []string) string {
 		return "None configured"
 	}
 	return strings.Join(origins, ", ")
+}
+
+func displayOriginsSummary(origins []string) string {
+	if len(origins) == 0 {
+		return "None configured; add required web app origins in Settings"
+	}
+	return displayOrigins(origins)
 }
 
 func indentLines(lines []string, prefix string, empty string) string {

@@ -9,14 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultAllowedOriginsAreLocalhostOnly(t *testing.T) {
+func TestDefaultAllowedOriginsAreEmpty(t *testing.T) {
 	cfg := Default()
 
-	assert.Equal(t, []string{
-		"http://localhost",
-		"http://localhost:3000",
-		"http://localhost:5173",
-	}, cfg.AllowedOrigins)
+	assert.Empty(t, cfg.AllowedOrigins)
 }
 
 func TestValidateOrigin(t *testing.T) {

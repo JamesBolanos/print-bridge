@@ -2,7 +2,7 @@
 
 ## Model: CORS allow-list, no additional authentication
 
-printer-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). There is no API key, token, or session layer in v1.
+printer-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). The allow-list is empty on first launch, so the user must add each trusted web app origin explicitly. There is no API key, token, or session layer in v1.
 
 This deliberately uses a known, established trust model for this category of localhost bridge tool, not a novel security posture.
 
