@@ -83,7 +83,7 @@ func Run() error {
 	}
 
 	ui.window = fyneApp.NewWindow(config.AppDisplayName)
-	ui.window.Resize(fyne.NewSize(760, 520))
+	ui.window.Resize(fyne.NewSize(680, 360))
 	ui.window.SetContent(ui.mainContent())
 
 	if err := bridgeServer.Start(); err != nil {

@@ -29,6 +29,7 @@ stateDiagram-v2
 The default view when the app is open.
 
 **Contents:**
+- Compact window sized for status, configuration summary, and actions only.
 - App logo, using the project icon asset.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
 - Runtime details: listener address, default printer address/port, and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings.
