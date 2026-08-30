@@ -34,7 +34,6 @@ The default view when the app is open.
 - Runtime details: listener address, default printer address/port, and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings.
 - Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
 - Buttons/links: **Settings**, **Details**, **Help**, **View Logs**, **Quit**
-- Recent activity: a short live-updating list of the last few requests (timestamp, endpoint, outcome) — a lightweight in-window view of the same data written to the log file. Not a full log viewer; see "View Logs" below for that.
 
 **Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("printer-bridge is still running in the tray") so the user isn't confused about whether the app exited.
 
@@ -91,11 +90,12 @@ Opened from the main window or tray/menu bar. Help is a first-class screen, sepa
 
 ### 5. Logs viewer
 
-Opened from the main window. Displays the current rotating log file's contents (see `03-architecture/architecture-overview.md` for rotation policy).
+Opened from the main window. Displays the current rotating log file's contents as a live activity view (see `03-architecture/architecture-overview.md` for rotation policy).
 
-- Read-only normal-contrast text view, most recent entries first, with a clear label that states the order.
+- Read-only normal-contrast text view, most recent entries first, with a clear label that states the order and that the view updates automatically.
 - A "Reveal in Finder/Explorer" button (platform-appropriate) so a technical user or the maintainer, if asked for help, can grab the raw file.
 - A Copy button so the visible log text can be shared for support.
+- No Refresh button; updates happen automatically while the window is open.
 - No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
 
 ### 6. Tray/menu bar icon

@@ -138,7 +138,7 @@ Completed v1 foundation:
 - Configurable printer port and localhost HTTP port
 - Connect/write timeouts
 - Config persistence
-- Rotating logs and recent activity
+- Live log viewer for recent activity
 - Fyne tray/menu bar UI
 - App identity: `com.jbolanosdiaz.printerbridge`
 - Initial app icon

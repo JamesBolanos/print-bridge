@@ -57,7 +57,7 @@ As a user, I want invalid settings (e.g. out-of-range port) rejected before they
 As a user, I want to see at a glance that printer-bridge is running and on what port, so that I can confirm it's ready before printing.
 - AC: Main window shows listener status (running/stopped) and current HTTP port.
 - AC: Non-affiliation disclaimer text (from `09-legal/disclaimer.md`) is visible on this screen without requiring a click.
-- AC: Buttons for Settings, View Logs, Quit are present and functional.
+- AC: Buttons for Settings, Details, Help, View Logs, Quit are present and functional.
 
 **S3.2 — Close-to-tray behavior**
 As a user, I want closing the main window to keep the app running in the tray, so that web apps can keep printing while I'm not looking at the window.
@@ -80,6 +80,8 @@ As a user, I want to change ports and allowed origins and have them take effect 
 **S3.5 — Logs viewer**
 As a user, I want to view recent activity from within the app, so that I can self-diagnose a failed print without hunting for a file on disk.
 - AC: Logs screen displays the current rotating log file's contents, most recent entries first.
+- AC: Logs screen updates automatically while open; no manual Refresh button is required.
+- AC: Copy button copies the visible log text.
 - AC: "Reveal in Finder/Explorer" button opens the platform file browser at the log file's location.
 
 ---

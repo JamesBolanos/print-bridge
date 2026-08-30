@@ -62,7 +62,7 @@ These values are defaults; do not hardcode them so tightly that they can't be ad
 - Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrinterBridge/` on macOS, `%APPDATA%\PrinterBridge\` on Windows).
 - Log every request: timestamp, endpoint, target host:port, outcome (success/error), and error detail if applicable.
 - Rotation policy: cap individual log file size (e.g. 5MB) and retain a small number of rotated files (e.g. 3) — exact values are an implementation detail, not a business requirement, but must exist so logs don't grow unbounded on a machine left running for a long session.
-- Viewable from within the app (see `05-ux/tray-app-spec.md`) — the user should not need to hunt through the filesystem to see recent activity.
+- Viewable live from within the app (see `05-ux/tray-app-spec.md`) — the user should not need to hunt through the filesystem to see recent activity.
 
 ## What this document does not cover
 

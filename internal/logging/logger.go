@@ -64,6 +64,9 @@ func (l *Logger) ReadLinesNewestFirst(limit int) ([]string, error) {
 		return nil, nil
 	}
 
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	data, err := os.ReadFile(l.path)
 	if err != nil {
 		if os.IsNotExist(err) {

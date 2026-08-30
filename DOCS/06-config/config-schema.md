@@ -43,7 +43,7 @@ The user adds the origin(s) they actually need via Settings. Examples include lo
 
 ## Relationship to the API
 
-- `defaultPrinterPort` and `defaultPrinterAddress` are **UI/settings conveniences only** — they pre-fill values for testing from within the app (see "Recent activity" / any built-in test-print feature) but do not constrain what a `/print` request can specify. The API contract in `04-api/openapi.yaml` is unaffected by these defaults.
+- `defaultPrinterPort` and `defaultPrinterAddress` are **UI/settings conveniences only** — they support app display and any built-in test-print feature but do not constrain what a `/print` request can specify. The API contract in `04-api/openapi.yaml` is unaffected by these defaults.
 - `allowedOrigins` directly maps to the CORS configuration used by the Gin server — this is the one config field with real runtime/security effect, not just UI convenience.
 - `httpPort` is the actual bind port for the Gin server — changing it requires the listener restart described in `03-architecture/architecture-overview.md` and `05-ux/tray-app-spec.md`.
 

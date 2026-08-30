@@ -35,12 +35,10 @@ type application struct {
 	cfg          config.Config
 	server       *server.Server
 	logger       *logging.Logger
-	activity     *activity.Store
 	statusIcon   *widget.Icon
 	statusLabel  *widget.Label
 	infoLabel    *widget.Label
 	messageLabel *widget.Label
-	activityList *widget.List
 	closeNotice  bool
 	stopRefresh  chan struct{}
 }
@@ -60,8 +58,7 @@ func Run() error {
 		return err
 	}
 
-	activityStore := activity.NewStore(50)
-	logger := logging.New(logPath, logging.DefaultMaxBytes, logging.DefaultMaxBackups, activityStore)
+	logger := logging.New(logPath, logging.DefaultMaxBytes, logging.DefaultMaxBackups, nil)
 	if loadResult.Warning != "" {
 		logger.Record(activity.Entry{
 			Timestamp: time.Now(),
@@ -82,7 +79,6 @@ func Run() error {
 		cfg:         cfg,
 		server:      bridgeServer,
 		logger:      logger,
-		activity:    activityStore,
 		stopRefresh: make(chan struct{}),
 	}
 
@@ -131,33 +127,7 @@ func (a *application) mainContent() fyne.CanvasObject {
 	quitButton := widget.NewButtonWithIcon("Quit", theme.CancelIcon(), a.quit)
 	actions := container.NewHBox(settingsButton, detailsButton, helpButton, logsButton, layout.NewSpacer(), quitButton)
 
-	a.activityList = widget.NewList(
-		func() int {
-			return len(a.activity.List())
-		},
-		func() fyne.CanvasObject {
-			label := widget.NewLabel("")
-			label.Wrapping = fyne.TextTruncate
-			return label
-		},
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			entries := a.activity.List()
-			label := obj.(*widget.Label)
-			if id >= len(entries) {
-				label.SetText("")
-				return
-			}
-			label.SetText(entries[id].String())
-		},
-	)
-
-	content := container.NewBorder(
-		container.NewVBox(heading, statusRow, a.infoLabel, a.messageLabel, disclaimerLabel, actions, widget.NewSeparator(), widget.NewLabel("Recent activity")),
-		nil,
-		nil,
-		nil,
-		a.activityList,
-	)
+	content := container.NewVBox(heading, statusRow, a.infoLabel, a.messageLabel, disclaimerLabel, actions)
 
 	a.window.SetCloseIntercept(func() {
 		if !a.closeNotice {
@@ -583,10 +553,9 @@ func (a *application) showLogs() {
 			logText.SetText("No log entries yet.")
 			return
 		}
-		logText.SetText("Newest log entries first\n\n" + strings.Join(lines, "\n"))
+		logText.SetText("Live log view - newest entries first\n\n" + strings.Join(lines, "\n"))
 	}
 
-	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), loadLogs)
 	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
 		a.app.Clipboard().SetContent(logText.Text())
 	})
@@ -597,8 +566,29 @@ func (a *application) showLogs() {
 	})
 
 	loadLogs()
+	stopLogs := make(chan struct{})
+	logsWindow.SetOnClosed(func() {
+		close(stopLogs)
+	})
+
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				fyne.Do(loadLogs)
+			case <-stopLogs:
+				return
+			case <-a.stopRefresh:
+				return
+			}
+		}
+	}()
+
 	logsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, copyButton, revealButton, layout.NewSpacer()),
+		container.NewHBox(copyButton, revealButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,
@@ -639,9 +629,6 @@ func (a *application) runRefreshLoop() {
 			case <-ticker.C:
 				fyne.Do(func() {
 					a.updateStatus()
-					if a.activityList != nil {
-						a.activityList.Refresh()
-					}
 				})
 			case <-a.stopRefresh:
 				return
