@@ -32,7 +32,7 @@ The default view when the app is open.
 - Compact window sized for status, configuration summary, and actions only.
 - App logo, using the project icon asset.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
-- Runtime details: listener address, default printer address/port, and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings.
+- Runtime details: default printer address/port and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings. Do not repeat the listener address here; the status row already owns listener status.
 - Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
 - Buttons/links: **Settings**, **Details**, **Help**, **View Logs**, **Quit**
 

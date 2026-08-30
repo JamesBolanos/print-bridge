@@ -80,7 +80,7 @@ func Run() error {
 	}
 
 	ui.window = fyneApp.NewWindow(config.AppDisplayName)
-	ui.window.Resize(fyne.NewSize(680, 360))
+	ui.window.Resize(fyne.NewSize(680, 330))
 	ui.window.SetContent(ui.mainContent())
 
 	if err := bridgeServer.Start(); err != nil {
@@ -201,15 +201,9 @@ func (a *application) updateInfo() {
 	if a.infoLabel == nil {
 		return
 	}
-	status := a.server.Status()
-	listener := status.Address
-	if listener == "" {
-		listener = "127.0.0.1:" + strconv.Itoa(a.cfg.HTTPPort)
-	}
 
 	a.infoLabel.SetText(fmt.Sprintf(
-		"Local listener: %s\nDefault printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
-		listener,
+		"Default printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
 		a.cfg.DefaultPrinterPort,
 		displayValue(a.cfg.DefaultPrinterAddress, "Not set"),
 		displayOriginsSummary(a.cfg.AllowedOrigins),
