@@ -65,33 +65,27 @@ Opened from the main window. Displays all user-relevant runtime/configuration in
 - Allowed CORS origins.
 - Config file path and log file path.
 - API endpoints.
-- Support prompt pointing users to Help and explaining that Details can be copied for diagnostics.
 - TCP timeout values and log rotation policy.
 
 **Controls:**
 - Refresh
 - Copy
-- Settings
-- Help
-- View Logs
 
 ### 4. Help
 
-Opened from the main window or tray/menu bar. Help is a first-class screen, separate from Details, focused on setup and troubleshooting instead of raw diagnostics.
+Opened from the main window or tray/menu bar. Help is a first-class screen, separate from Details, focused on setup and troubleshooting instead of raw diagnostics. Its language is for a normal user, not a developer.
 
 **Contents:**
 - Current listener, default printer address/port, and allowed-origin summary.
-- How to add the calling web app origin in Settings.
-- Listener test using `/ping`.
-- Printer reachability test using `/status`.
-- Print request requirements for `/print`.
-- Common failure checks: exact origin match, printer address/port, network, VPN, firewall, logs, and diagnostic Details copy.
+- What to check when nothing prints.
+- What to check when the website cannot connect.
+- Printer IP address or hostname guidance.
+- Printer port guidance.
+- Allowed origin guidance using website-address language, including that an allowed origin is different from the printer IP address.
+- Common failure checks: printer power/network, exact origin match, printer address/port, VPN, firewall, logs, and diagnostic Details copy.
 
 **Controls:**
 - Copy
-- Settings
-- Details
-- View Logs
 
 ### 5. Logs viewer
 

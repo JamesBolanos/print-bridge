@@ -339,12 +339,9 @@ func (a *application) showDetails() {
 	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
 		a.app.Clipboard().SetContent(detailsText.Text())
 	})
-	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
-	helpButton := widget.NewButtonWithIcon("Help", theme.HelpIcon(), a.showHelp)
-	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 
 	detailsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, copyButton, settingsButton, helpButton, logsButton, layout.NewSpacer()),
+		container.NewHBox(refreshButton, copyButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,
@@ -389,10 +386,6 @@ func (a *application) detailsText() string {
 		"  GET /status?host=<printer_host>&port=<printer_port>",
 		"  POST /print",
 		"",
-		"Support",
-		"  Open Help for setup and troubleshooting steps.",
-		"  Use Copy to share this diagnostic information when asking for help.",
-		"",
 		"Timeouts",
 		"  TCP connect timeout: " + server.DefaultConnectTimeout.String(),
 		"  TCP write timeout: " + server.DefaultWriteTimeout.String(),
@@ -414,12 +407,9 @@ func (a *application) showHelp() {
 	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
 		a.app.Clipboard().SetContent(helpText)
 	})
-	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
-	detailsButton := widget.NewButtonWithIcon("Details", theme.InfoIcon(), a.showDetails)
-	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 
 	helpWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(copyButton, settingsButton, detailsButton, logsButton, layout.NewSpacer()),
+		container.NewHBox(copyButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,
@@ -434,41 +424,36 @@ func (a *application) helpText() string {
 	return strings.Join([]string{
 		"# Help",
 		"",
-		"## Current Setup",
-		"- Listener: `http://" + listener + "`",
+		"## If Nothing Prints",
+		"- Make sure printer-bridge says it is listening.",
+		"- Make sure the printer is powered on and connected to the network.",
+		"- Check the printer IP address or hostname.",
+		"- Check the printer port. Many network printers use port 9100, but your printer may use a different one.",
+		"- Check whether VPN, Wi-Fi, or firewall settings are blocking this computer from reaching the printer.",
+		"- Open View Logs after a failed print to see the latest result.",
+		"",
+		"## If The Website Cannot Connect",
+		"- Check Allowed origins in Settings.",
+		"- An allowed origin is the website address that may use printer-bridge.",
+		"- This is different from the printer IP address.",
+		"- Add the exact website address that is allowed to use printer-bridge.",
+		"- Include the beginning, such as http:// or https://.",
+		"- Include the port if the website uses one.",
+		"- Do not include the page path after the address.",
+		"",
+		"Example: if the website is open at `http://localhost:3000/orders`, add `http://localhost:3000`.",
+		"",
+		"Only add websites you trust. If no origins are configured, websites cannot connect.",
+		"",
+		"## Check These Values",
+		"- printer-bridge address: `http://" + listener + "`",
 		"- Default printer address: `" + displayValue(a.cfg.DefaultPrinterAddress, "Not set") + "`",
 		"- Default printer port: `" + strconv.Itoa(a.cfg.DefaultPrinterPort) + "`",
 		"- Allowed origins: " + displayOriginsForHelp(a.cfg.AllowedOrigins),
 		"",
-		"## Connect A Browser App",
-		"Open Settings and add the exact origin of the web app that will call printer-bridge. Use scheme, host, and optional port only. Do not include a path.",
-		"",
-		"Examples: `http://localhost:3000`, `http://127.0.0.1:5173`, `https://app.example.com`.",
-		"",
-		"Only add origins you trust. If no origins are configured, browser apps cannot call the API.",
-		"",
-		"## Test The Listener",
-		"Open this URL in a browser:",
-		"",
-		"`http://" + listener + "/ping`",
-		"",
-		"You should receive `{\"message\":\"pong\"}`.",
-		"",
-		"## Check Printer Reachability",
-		"Use the printer IP or hostname and port:",
-		"",
-		"`http://" + listener + "/status?host=<printer_host>&port=<printer_port>`",
-		"",
-		"If the printer port is omitted, printer-bridge uses the default printer port.",
-		"",
-		"## Send A Print Job",
-		"`POST /print` requires `printerHostname` and `text`. `printerPort` is optional. The text is sent directly to the printer without format conversion.",
-		"",
-		"## If Something Fails",
-		"- Browser connection problems usually mean the calling origin is missing or does not exactly match.",
-		"- Printer failures usually mean the printer address, port, network, VPN, or firewall needs checking.",
-		"- Use View Logs for recent request results.",
-		"- Use Details and Copy when sending support information.",
+		"## When Asking For Help",
+		"- Open Details and use Copy when someone asks for technical information.",
+		"- Open View Logs to see recent connection or printing errors.",
 	}, "\n")
 }
 
