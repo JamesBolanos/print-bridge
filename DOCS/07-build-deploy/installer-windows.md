@@ -2,7 +2,9 @@
 
 ## Packaging tool
 
-**WiX Toolset** — selected because v1 should ship a true `.msi` installer at no certificate/tooling cost. The installer remains simple: one GUI executable, shortcuts, no service registration, no auto-start entry.
+**WiX Toolset** — selected so the project can ship a true `.msi` installer at
+no certificate/tooling cost. The installer remains simple: one GUI executable,
+shortcuts, no service registration, no auto-start entry.
 
 ## What the installer does
 
@@ -11,7 +13,7 @@
 - **Does not** register any Startup/auto-run entry, per ADR-001.
 - Sets the app's data directory (`%APPDATA%\PrinterBridge\`) on first run, not at install time — the app itself creates this on launch if absent.
 
-## Signing status for v1
+## Signing status for the current beta
 
 **Unsigned**, per `01-business/constraints.md` and ADR-003. The build pipeline's existing conditional signing hook (`WINDOWS_SIGN_CERT_BASE64` / `WINDOWS_SIGN_CERT_PASSWORD`) remains in the workflow but is not populated — this keeps the door open to enable signing later without a pipeline rewrite.
 
@@ -28,7 +30,7 @@ This is expected, not a bug. Documented workaround for end users (to be included
 
 This should be presented plainly and honestly in end-user-facing docs — e.g.: "printer-bridge is a free, independent tool and isn't yet code-signed. Windows will show a warning the first time you run the installer — this is expected for unsigned software, not a sign of a problem. Click 'More info' → 'Run anyway' to continue." Avoid burying this in fine print; a user who hits an unexplained security warning is likely to abandon the install rather than dig for docs.
 
-## Out of scope for v1
+## Out of scope for the current beta
 
 - MSIX/Windows Store packaging — adds its own signing/certification requirements; not worth it for a free showcase tool at this stage.
 - Silent/unattended install flags — not needed for a manually-installed single-user tool.

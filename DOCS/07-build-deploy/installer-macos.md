@@ -10,11 +10,11 @@
 
 - The Fyne-built binary.
 - A standard `Info.plist` with app name, bundle identifier (e.g. `com.<yourname>.printbridge` — pick a real reverse-DNS identifier, this matters even unsigned, since it's used for app data directory conventions and any future signing), and version.
-- App icon (asset to be created separately — not covered by this playbook).
+- App icon.
 
-## Signing/notarization status for v1
+## Signing/notarization status for the current beta
 
-**Unsigned, not notarized**, per `01-business/constraints.md` and ADR-003. No Apple Developer Program enrollment for v1.
+**Unsigned, not notarized**, per `01-business/constraints.md` and ADR-003. No Apple Developer Program enrollment for the current beta.
 
 ## What the user will see
 
@@ -36,7 +36,7 @@ This should be documented plainly, same tone as the Windows doc: "printer-bridge
 
 Since the `.dmg` will be downloaded via a browser, macOS applies a quarantine attribute (`com.apple.quarantine`) that triggers the Gatekeeper check described above — this is unavoidable without notarization and is the direct cause of the workaround being necessary. No action needed here beyond documenting it; just don't be surprised if local testing (e.g. building and running directly on your own dev machine) doesn't show the same prompt, since quarantine is applied by the browser/download process, not the build itself.
 
-## Out of scope for v1
+## Out of scope for the current beta
 
 - Notarization and stapling — deferred per ADR-003, revisit if the project gains real usage.
 - Mac App Store distribution — a separate, more involved process (sandboxing requirements, review process) not aligned with a free/independent showcase tool.

@@ -49,9 +49,11 @@ The user adds the origin(s) they actually need via Settings. Examples include lo
 
 ## Migration / versioning
 
-Not required for v1 — this new repo creates `config.json` on first launch. If the schema changes in a future version, add a `configVersion` field at that time — do not add one now for a version that doesn't exist yet.
+Not required for the current beta — the app creates `config.json` on first
+launch. If the schema changes in a future version, add a `configVersion` field
+at that time.
 
 ## What is NOT stored in config
 
 - Print job history/logs — these live in the rotating log file (`03-architecture/architecture-overview.md`), not in `config.json`.
-- Window position/size or other pure UI state — not required for v1; the app can open at a sensible default size each launch.
+- Window position/size or other pure UI state — not required for the current beta; the app can open at a sensible default size each launch.

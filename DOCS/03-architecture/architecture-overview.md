@@ -55,7 +55,7 @@ This is a deliberate simplification over running the HTTP agent as a separate ba
 | TCP write to printer | 5 seconds | Return error: write failed/timed out |
 | `/status` probe connect | 3 seconds | Return `{ reachable: false }`, not an error — this is an expected outcome for a status check |
 
-These values are defaults; do not hardcode them so tightly that they can't be adjusted later, but they do not need to be user-configurable in v1 (see `06-config/config-schema.md` for what is/isn't user-facing).
+These values are defaults; do not hardcode them so tightly that they can't be adjusted later, but they do not need to be user-configurable in the current beta (see `06-config/config-schema.md` for what is/isn't user-facing).
 
 ## Logging
 

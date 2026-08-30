@@ -88,7 +88,7 @@ Opened from the main window. Displays the current rotating log file's contents a
 
 - Read-only normal-contrast text view, most recent entries first, with a clear label that states the order and that the view updates automatically.
 - No in-window action buttons; updates happen automatically while the window is open.
-- No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
+- No in-app filtering/search required for the current beta — this is a lightweight troubleshooting view, not a log management tool.
 
 ### 6. Tray/menu bar icon
 
@@ -111,9 +111,9 @@ Persistent while the app is running (whether the main window is open or minimize
 |---|---|
 | Listener fails to start (e.g. port already in use) | Main window shows a clear error with the specific reason and a shortcut to Settings to change the port. Tray icon still appears (so the user isn't left with no way to reach the app) but its status line reflects "Stopped." |
 | Settings save triggers restart, restart fails | Show the same error pattern as above, inline in the Settings screen, without discarding the user's entered values (so they don't have to retype). |
-| First launch | No special onboarding flow required for v1. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
+| First launch | No special onboarding flow required for the current beta. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
 
-## Explicitly out of scope for v1
+## Explicitly out of scope for the current beta
 
 - No saved multi-printer profile list — the "default printer address" field is a single convenience value, not an address book (see BRD out-of-scope, BR/ADR references).
 - No in-app update checker/notification.

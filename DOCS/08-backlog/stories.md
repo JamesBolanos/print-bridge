@@ -1,6 +1,7 @@
 # Backlog — Stories
 
-INVEST-format stories under each epic from `08-backlog/epics.md`. Acceptance criteria are written to be self-checkable by an agentic build tool — specific, testable conditions, not vague goals.
+INVEST-format stories under each epic from `08-backlog/epics.md`. Acceptance
+criteria are written to be specific and testable, not vague goals.
 
 ---
 

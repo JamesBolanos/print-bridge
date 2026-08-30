@@ -14,7 +14,7 @@ This is released as a free showcase project — not a commercial product, not a 
 
 printer-bridge is an independent, unofficial project. It is **not affiliated with, endorsed by, or connected to any printer manufacturer**. This must be stated in the application UI, the repository, and installation instructions. See `09-legal/disclaimer.md` for the exact text to use.
 
-## What v1 is
+## What The Current Beta Is
 
 - A GUI desktop app (Mac + Windows) the user launches manually when they need to print.
 - Minimizes to the system tray/menu bar while running; fully quits when the user quits it.
@@ -25,13 +25,13 @@ printer-bridge is an independent, unofficial project. It is **not affiliated wit
 - Local rotating log file, viewable from within the app.
 - Unsigned installers for both platforms (`.msi` via WiX Toolset on Windows, `.dmg` on macOS), with documented user-facing workarounds for the resulting OS security warnings.
 
-## What v1 explicitly is not
+## What The Current Beta Explicitly Is Not
 
 - **Not auto-starting on login.** The user opens it when needed; it does not register as a background/startup item.
-- **Not code-signed or notarized.** No paid Apple Developer or Windows signing certificate in v1 — this is a documented, accepted trade-off for a free tool, not an oversight.
-- **Not authenticated beyond CORS.** No API key/token layer in v1.
+- **Not code-signed or notarized.** No paid Apple Developer or Windows signing certificate in the current beta — this is a documented, accepted trade-off for a free tool, not an oversight.
+- **Not authenticated beyond CORS.** No API key/token layer in the current beta.
 - **Not a format converter.** It passes raw printer-language text through as-is; it does not convert PDFs or images to ZPL/EPL.
-- **Not multi-printer-profile management.** The caller supplies the target IP/port per request; there's no saved address book in v1.
+- **Not multi-printer-profile management.** The caller supplies the target IP/port per request; there's no saved address book in the current beta.
 
 These exclusions are deliberate scope cuts, not gaps — see `03-architecture/decisions.md` for the reasoning behind each, so they aren't silently reintroduced during the build.
 
@@ -40,7 +40,7 @@ These exclusions are deliberate scope cuts, not gaps — see `03-architecture/de
 - **Web developers / integrators**: call the local API from their own web app to print labels.
 - **End users**: run the tray app on their machine so their browser-based tool can print; interact with it only to configure ports/printer address and to see logs/status.
 
-## Success criteria for v1
+## Success Criteria For The Current Beta
 
 - A web page can successfully print a raw printer-language label to a compatible network printer via the local API on both macOS and Windows.
 - An unreachable printer produces a clear error within a few seconds, not a hang.

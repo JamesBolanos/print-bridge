@@ -7,7 +7,7 @@ info:
     browser-based web apps to send raw print data to a network-connected
     printer, and to check printer/agent status. This spec is the
     authoritative source of truth for request/response shapes — prose
-    documentation elsewhere in the playbook is explanatory, not authoritative.
+    documentation elsewhere in the repo is explanatory, not authoritative.
     See 03-architecture/security-model.md for the CORS-only access model and
     02-process/bpmn-print-job-flow.md for the end-to-end flow.
 servers:
@@ -186,4 +186,4 @@ components:
       properties:
         message:
           type: string
-          description: Human-readable error detail. Not a machine-parseable error code in v1 — callers should treat any non-2xx response as a failure and surface `message` to their own users/logs as needed.
+          description: Human-readable error detail. Not a machine-parseable error code in the current beta — callers should treat any non-2xx response as a failure and surface `message` to their own users/logs as needed.

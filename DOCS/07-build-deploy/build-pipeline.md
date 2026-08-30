@@ -1,6 +1,6 @@
 # Build Pipeline — printer-bridge
 
-Read `03-architecture/architecture-overview.md` first. This document describes the GitHub Actions setup needed to produce v1.
+Read `03-architecture/architecture-overview.md` first. This document describes the GitHub Actions setup needed to produce the current beta.
 
 ## Starting point
 
@@ -8,11 +8,11 @@ The current repository has:
 - Go module with the desktop app entry point, Gin HTTP server, CORS, config, logging, and raw TCP print.
 - GitHub Actions CI: automated build/test on push/PR.
 - Release workflow triggered by semver tags (`v*.*.*`) that produces Windows and macOS installer artifacts.
-- Optional Windows signing hook (`WINDOWS_SIGN_CERT_BASE64` / `WINDOWS_SIGN_CERT_PASSWORD` secrets) — **not used for v1** per `01-business/constraints.md`; leave the hook in place but unset, so signing can be turned on later without a workflow rewrite.
+- Optional Windows signing hook (`WINDOWS_SIGN_CERT_BASE64` / `WINDOWS_SIGN_CERT_PASSWORD` secrets) — **not used for the current beta** per `01-business/constraints.md`; leave the hook in place but unset, so signing can be turned on later without a workflow rewrite.
 
-## What changes for v1
+## What changes for the current beta
 
-| Area | Prototype (current) | v1 target |
+| Area | Earlier prototype | Current beta |
 |---|---|---|
 | Entry point | Headless HTTP server only | Fyne GUI app with embedded HTTP server (single binary, per `03-architecture/architecture-overview.md`) |
 | Config | `ALLOW_ORIGINS` env var | `config.json` file (see `06-config/config-schema.md`); Settings UI is the primary path |
@@ -39,7 +39,7 @@ flowchart LR
 
 - Fyne requires CGO and platform-specific build considerations (it links against native GUI libraries) — cross-compiling a Fyne app from a single runner is harder than the prototype's pure-Go cross-compile. **Build Windows and macOS binaries on their native runners** (`windows-latest`, `macos-latest` GitHub-hosted runners) rather than cross-compiling from Linux, to avoid CGO cross-toolchain complexity. This is a change from however the current prototype's multi-platform build is set up (worth checking the existing workflow file directly, since this document is describing the target, not auditing the current YAML line-by-line).
 - Packaging (`.msi`/`.dmg`) happens after the binary is built, per platform. See the platform-specific installer docs for tool choices.
-- No signing step runs unless the Windows signing secrets are present. macOS notarization is out of scope for v1.
+- No signing step runs unless the Windows signing secrets are present. macOS notarization is out of scope for the current beta.
 
 ## Versioning
 

@@ -2,13 +2,13 @@
 
 `printer-bridge` is a free, local desktop bridge that lets browser-based web apps send raw print jobs to network-connected thermal and label printers without using the operating system print dialog.
 
-This repository is the v1 evolution of the original Go beta: the working HTTP-to-TCP print path is now wrapped in a desktop tray app with configuration, status checks, logging, and installer packaging metadata.
+It runs as a small desktop tray app, exposes a localhost HTTP API, and forwards raw printer-language text such as ZPL, EPL, or CPCL to a network printer over TCP.
 
 ## Project Status
 
-Current status: **pre-release v1 beta**. The core app, local API, config,
-logging, and release workflow are in place; public release validation should
-still include real macOS and Windows installer testing.
+Current status: **beta**. The core app, local API, config, logging, and release
+workflow are in place; public release validation should still include real
+macOS and Windows installer testing.
 
 This repository currently contains:
 
@@ -17,11 +17,11 @@ This repository currently contains:
 - JSON config persistence in the user's app config directory.
 - Rotating local request logs.
 - Native release workflow definitions for macOS DMG and Windows MSI artifacts.
-- A full v1 planning and implementation playbook in [`DOCS/`](DOCS/README.md).
+- Product, API, architecture, security, and packaging notes in [`DOCS/`](DOCS/README.md).
 
 The `DOCS/` folder defines the product scope, API contract, architecture, security model, UX, configuration schema, packaging plan, and backlog stories.
 
-## What v1 Provides
+## What It Provides
 
 - A manually launched desktop app for macOS and Windows.
 - System tray/menu bar behavior so the bridge can keep running while the main window is hidden.
@@ -36,12 +36,12 @@ The `DOCS/` folder defines the product scope, API contract, architecture, securi
 - Local rotating logs, viewable from the app.
 - Unsigned Windows and macOS installers with clear user-facing installation guidance.
 
-## What v1 Is Not
+## What It Does Not Do
 
 - Not affiliated with, endorsed by, sponsored by, or connected to any printer manufacturer.
 - Not an official replacement for any vendor product.
 - Not a background service that starts automatically on login.
-- Not code-signed or notarized in v1.
+- Not code-signed or notarized in the current beta.
 - Not an authentication system beyond CORS allow-listing.
 - Not a PDF/image-to-ZPL converter.
 - Not a multi-printer profile manager.
@@ -113,14 +113,14 @@ curl -X POST http://localhost:8080/print \
 
 ## Security Model
 
-v1 is designed as a localhost desktop bridge. Browser access is controlled through a configured CORS allow-list. This keeps integration simple for web developers while matching the trust model commonly used by local browser-to-printer bridge tools.
+`printer-bridge` is designed as a localhost desktop bridge. Browser access is controlled through a configured CORS allow-list. This keeps integration simple for web developers while matching the trust model commonly used by local browser-to-printer bridge tools.
 
 Important limits:
 
 - CORS is browser-enforced access control, not general-purpose authentication.
 - Only trusted web app origins should be added to the allow-list.
 - The bridge should bind to localhost only.
-- Any future token/API-key authentication would be a deliberate scope change, not a v1 requirement.
+- Any future token/API-key authentication would be a deliberate scope change.
 
 See [`DOCS/03-architecture/security-model.md`](DOCS/03-architecture/security-model.md) for the full model and accepted risks.
 
@@ -153,7 +153,7 @@ security reporting.
 
 ## Development Roadmap
 
-Completed v1 foundation:
+Completed beta foundation:
 
 - Core API: `/ping`, `/status`, `/print`
 - Configurable printer port and localhost HTTP port
@@ -173,7 +173,7 @@ Remaining validation before public release should focus on real Windows MSI exec
 - [`DOCS/01-business/`](DOCS/01-business/) - business requirements and constraints.
 - [`DOCS/02-process/`](DOCS/02-process/) - print-job and user-workflow diagrams.
 - [`DOCS/03-architecture/`](DOCS/03-architecture/) - architecture, decisions, and security model.
-- [`DOCS/04-api/openapi.yaml`](DOCS/04-api/openapi.yaml) - target v1 API contract.
+- [`DOCS/04-api/openapi.yaml`](DOCS/04-api/openapi.yaml) - API contract.
 - [`DOCS/05-ux/tray-app-spec.md`](DOCS/05-ux/tray-app-spec.md) - tray app screens and behavior.
 - [`DOCS/06-config/config-schema.md`](DOCS/06-config/config-schema.md) - config file shape and validation.
 - [`DOCS/07-build-deploy/`](DOCS/07-build-deploy/) - build pipeline and installer guidance.
