@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: printer-bridge Local API
+  version: "1.0.0"
+  description: >
+    Local HTTP API exposed by printer-bridge on the user's machine. Called by
+    browser-based web apps to send raw print data to a network-connected
+    printer, and to check printer/agent status. This spec is the
+    authoritative source of truth for request/response shapes — prose
+    documentation elsewhere in the playbook is explanatory, not authoritative.
+    See 03-architecture/security-model.md for the CORS-only access model and
+    02-process/bpmn-print-job-flow.md for the end-to-end flow.
+servers:
+  - url: http://localhost:{port}
+    description: Local printer-bridge instance. Port is user-configured (see 06-config/config-schema.md); default shown here.
+    variables:
+      port:
+        default: "8080"
+
+paths:
+  /ping:
+    get:
+      operationId: ping
+      summary: Liveness check
+      description: Confirms the printer-bridge agent is running and reachable. Does not check printer connectivity — use /status for that.
+      responses:
+        "200":
+          description: Agent is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+              example:
+                message: pong
+
+  /status:
+    get:
+      operationId: getPrinterStatus
+      summary: Check whether a specific printer is reachable
+      description: >
+        Attempts a TCP connect (probe only, no data written) to the given
+        host:port within the connect timeout defined in
+        03-architecture/architecture-overview.md. Returns reachable:false on
+        timeout or connection refusal rather than an error response — an
+        unreachable printer is an expected, non-exceptional outcome for this
+        endpoint.
+      parameters:
+        - name: host
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "192.168.1.100"
+          description: Printer IP address or hostname.
+        - name: port
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 9100
+          example: 9100
+          description: Printer TCP port. Defaults to 9100 (standard raw/JetDirect printing port) if omitted.
+      responses:
+        "200":
+          description: Probe completed (reachable or not — check the reachable field).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+              examples:
+                reachable:
+                  value: { reachable: true, host: "192.168.1.100", port: 9100 }
+                unreachable:
+                  value: { reachable: false, host: "192.168.1.100", port: 9100 }
+        "400":
+          description: Missing or invalid host/port parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /print:
+    post:
+      operationId: sendPrintJob
+      summary: Send a raw print job to a printer
+      description: >
+        Opens a TCP connection to printerHostname:printerPort and writes the
+        text field to it as-is (raw passthrough — no format conversion; see
+        ADR-005 in 03-architecture/decisions.md). Connection and write are
+        each bounded by the timeouts defined in
+        03-architecture/architecture-overview.md.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrintJobRequest"
+            example:
+              printerHostname: "192.168.1.100"
+              printerPort: 9100
+              text: "^XA^FO50,50^ADN,36,20^FDTest Label^FS^XZ"
+      responses:
+        "200":
+          description: Data was successfully written to the printer socket. Does not guarantee the physical label printed — only that the bridge delivered the data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintJobResponse"
+              example:
+                message: "OK"
+        "400":
+          description: Malformed request body (invalid JSON or missing required fields).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "error parsing JSON: missing required field 'printerHostname'"
+        "502":
+          description: Could not establish a TCP connection to the printer within the connect timeout.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "error connecting to printer: dial tcp 192.168.1.100:9100: i/o timeout"
+        "500":
+          description: Connected, but writing data to the printer failed or timed out.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "error sending data to printer: write timeout after 5s"
+
+components:
+  schemas:
+    PingResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: pong
+
+    StatusResponse:
+      type: object
+      required: [reachable, host, port]
+      properties:
+        reachable:
+          type: boolean
+        host:
+          type: string
+        port:
+          type: integer
+
+    PrintJobRequest:
+      type: object
+      required: [printerHostname, text]
+      properties:
+        printerHostname:
+          type: string
+          description: Printer IP address or hostname.
+          example: "192.168.1.100"
+        printerPort:
+          type: integer
+          default: 9100
+          description: Printer TCP port. Optional — defaults to 9100 if omitted.
+          example: 9100
+        text:
+          type: string
+          description: Raw printer-language payload (e.g. ZPL, EPL, CPCL) sent as-is to the printer. Not validated or transformed by the bridge.
+          example: "^XA^FO50,50^ADN,36,20^FDTest Label^FS^XZ"
+
+    PrintJobResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: "OK"
+
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Human-readable error detail. Not a machine-parseable error code in v1 — callers should treat any non-2xx response as a failure and surface `message` to their own users/logs as needed.

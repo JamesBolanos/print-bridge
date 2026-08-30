@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="printer-bridge"
+    Manufacturer="J Bolanos Diaz"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="{6D03A942-AE7C-4B34-B0C4-05EC34F26C87}"
+    Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of printer-bridge is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="printer-bridge">
+        <Component Id="AppExecutable" Guid="{A8C67E84-5D29-4C21-9613-81BBF278F4B9}">
+          <File Id="PrinterBridgeExe" Source="$(var.AppExe)" KeyPath="yes">
+            <Shortcut
+              Id="StartMenuShortcut"
+              Directory="ApplicationProgramsFolder"
+              Name="printer-bridge"
+              Description="Local browser-to-printer bridge"
+              WorkingDirectory="INSTALLFOLDER" />
+            <Shortcut
+              Id="DesktopShortcut"
+              Directory="DesktopFolder"
+              Name="printer-bridge"
+              Description="Local browser-to-printer bridge"
+              WorkingDirectory="INSTALLFOLDER" />
+          </File>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="printer-bridge">
+        <Component Id="ApplicationShortcutCleanup" Guid="{5E3E3996-022A-44BB-B9CF-60AC07FE00C4}">
+          <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue
+            Root="HKCU"
+            Key="Software\JBolanosDiaz\printer-bridge"
+            Name="installed"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="printer-bridge" Level="1">
+      <ComponentRef Id="AppExecutable" />
+      <ComponentRef Id="ApplicationShortcutCleanup" />
+    </Feature>
+  </Package>
+</Wix>
