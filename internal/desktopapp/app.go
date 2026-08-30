@@ -281,10 +281,26 @@ func (a *application) showSettings() {
 	errorLabel.Wrapping = fyne.TextWrapWord
 
 	form := widget.NewForm(
-		widget.NewFormItem("HTTP port", httpPortEntry),
-		widget.NewFormItem("Default printer port", printerPortEntry),
-		widget.NewFormItem("Default printer address", printerAddressEntry),
-		widget.NewFormItem("Allowed origins", originsEntry),
+		settingsFormItem(
+			"HTTP port",
+			httpPortEntry,
+			"Local port used by web apps to reach printer-bridge. Use 8080 unless another app is already using it.",
+		),
+		settingsFormItem(
+			"Default printer port",
+			printerPortEntry,
+			"Used when a print request does not include a printer port. Many network printers use 9100.",
+		),
+		settingsFormItem(
+			"Default printer address",
+			printerAddressEntry,
+			"Optional printer IP address or hostname. Web apps can still send a different printer address per request.",
+		),
+		settingsFormItem(
+			"Allowed origins",
+			originsEntry,
+			"Website addresses allowed to use printer-bridge from a browser. One per line, no page path.",
+		),
 	)
 
 	saveButton := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
@@ -325,6 +341,12 @@ func (a *application) showSettings() {
 		container.NewVScroll(container.NewVBox(form, errorLabel)),
 	)))
 	settingsWindow.Show()
+}
+
+func settingsFormItem(text string, control fyne.CanvasObject, hint string) *widget.FormItem {
+	item := widget.NewFormItem(text, control)
+	item.HintText = hint
+	return item
 }
 
 func (a *application) showDetails() {
@@ -549,9 +571,7 @@ func (a *application) showLogs() {
 	logsWindow := a.app.NewWindow("Logs")
 	logsWindow.Resize(fyne.NewSize(760, 520))
 
-	logText := widget.NewMultiLineEntry()
-	logText.Disable()
-	logText.SetMinRowsVisible(18)
+	logText := widget.NewTextGrid()
 
 	loadLogs := func() {
 		lines, err := a.logger.ReadLinesNewestFirst(500)
@@ -563,10 +583,13 @@ func (a *application) showLogs() {
 			logText.SetText("No log entries yet.")
 			return
 		}
-		logText.SetText(strings.Join(lines, "\n"))
+		logText.SetText("Newest log entries first\n\n" + strings.Join(lines, "\n"))
 	}
 
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), loadLogs)
+	copyButton := widget.NewButtonWithIcon("Copy", theme.ContentCopyIcon(), func() {
+		a.app.Clipboard().SetContent(logText.Text())
+	})
 	revealButton := widget.NewButtonWithIcon("Reveal", theme.FolderOpenIcon(), func() {
 		if err := revealFile(a.logger.Path()); err != nil {
 			logText.SetText("Unable to reveal log file: " + err.Error())
@@ -575,7 +598,7 @@ func (a *application) showLogs() {
 
 	loadLogs()
 	logsWindow.SetContent(container.NewPadded(container.NewBorder(
-		container.NewHBox(refreshButton, revealButton, layout.NewSpacer()),
+		container.NewHBox(refreshButton, copyButton, revealButton, layout.NewSpacer()),
 		nil,
 		nil,
 		nil,

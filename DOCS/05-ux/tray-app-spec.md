@@ -47,6 +47,7 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 - Default printer port (numeric input, pre-filled with 9100)
 - Default printer address (optional text input — a convenience default, not a saved profile list; see ADR scope note below)
 - CORS allowed origins (list input — add/remove entries; empty by default)
+- Tooltip-style helper text for every setting. The helper text should explain what the setting means in user-facing language without requiring documentation lookup.
 - **Save** and **Cancel** buttons
 
 **Save behavior:**
@@ -92,8 +93,9 @@ Opened from the main window or tray/menu bar. Help is a first-class screen, sepa
 
 Opened from the main window. Displays the current rotating log file's contents (see `03-architecture/architecture-overview.md` for rotation policy).
 
-- Read-only text view, most recent entries first or a scroll-to-bottom default — pick one and keep it consistent; recommend most-recent-first since users opening this are typically troubleshooting a just-failed print.
+- Read-only normal-contrast text view, most recent entries first, with a clear label that states the order.
 - A "Reveal in Finder/Explorer" button (platform-appropriate) so a technical user or the maintainer, if asked for help, can grab the raw file.
+- A Copy button so the visible log text can be shared for support.
 - No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
 
 ### 6. Tray/menu bar icon
