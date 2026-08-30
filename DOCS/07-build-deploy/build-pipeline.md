@@ -1,4 +1,4 @@
-# Build Pipeline — printer-bridge
+# Build Pipeline — print-bridge
 
 Read `03-architecture/architecture-overview.md` first. This document describes the GitHub Actions setup needed to produce the current beta.
 
@@ -9,6 +9,7 @@ The current repository has:
 - GitHub Actions CI: automated build/test on push/PR.
 - Release workflow triggered by semver tags (`v*.*.*`) that produces Windows and macOS installer artifacts.
 - Optional Windows signing hook (`WINDOWS_SIGN_CERT_BASE64` / `WINDOWS_SIGN_CERT_PASSWORD` secrets) — **not used for the current beta** per `01-business/constraints.md`; leave the hook in place but unset, so signing can be turned on later without a workflow rewrite.
+- Free macOS ad-hoc signing in the release workflow. This validates the `.app` bundle structure before packaging the DMG, without requiring Apple Developer Program membership.
 
 ## What changes for the current beta
 
@@ -39,7 +40,7 @@ flowchart LR
 
 - Fyne requires CGO and platform-specific build considerations (it links against native GUI libraries) — cross-compiling a Fyne app from a single runner is harder than the prototype's pure-Go cross-compile. **Build Windows and macOS binaries on their native runners** (`windows-latest`, `macos-latest` GitHub-hosted runners) rather than cross-compiling from Linux, to avoid CGO cross-toolchain complexity. This is a change from however the current prototype's multi-platform build is set up (worth checking the existing workflow file directly, since this document is describing the target, not auditing the current YAML line-by-line).
 - Packaging (`.msi`/`.dmg`) happens after the binary is built, per platform. See the platform-specific installer docs for tool choices.
-- No signing step runs unless the Windows signing secrets are present. macOS notarization is out of scope for the current beta.
+- No Windows signing step runs unless the Windows signing secrets are present. The macOS workflow ad-hoc signs and verifies the `.app` bundle before creating the DMG. It does not use paid Developer ID signing or notarization.
 
 ## Versioning
 

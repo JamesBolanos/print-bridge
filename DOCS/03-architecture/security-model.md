@@ -1,15 +1,15 @@
-# Security Model — printer-bridge
+# Security Model — print-bridge
 
 ## Model: CORS allow-list, no additional authentication
 
-printer-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). The allow-list is empty on first launch, so the user must add each trusted web app origin explicitly. There is no API key, token, or session layer in the current beta.
+print-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). The allow-list is empty on first launch, so the user must add each trusted web app origin explicitly. There is no API key, token, or session layer in the current beta.
 
 This deliberately uses a known, established trust model for this category of localhost bridge tool, not a novel security posture.
 
 ## Why this is the accepted model for the current beta
 
 - **The bridge only listens on localhost.** It binds to `127.0.0.1`, so it is not exposed to other machines on the network. Same-machine processes can still reach it.
-- **CORS is enforced by the browser, not by printer-bridge.** A browser request from a non-allow-listed origin is blocked by browser CORS handling. This is not general-purpose authentication and does not restrict non-browser local clients such as scripts or native apps.
+- **CORS is enforced by the browser, not by print-bridge.** A browser request from a non-allow-listed origin is blocked by browser CORS handling. This is not general-purpose authentication and does not restrict non-browser local clients such as scripts or native apps.
 - **Adding a token would require the calling web app to embed and transmit a secret in client-side JavaScript**, which is visible to anyone who opens browser dev tools. It would not meaningfully raise the security bar for this specific threat model, while adding real integration friction (BR-5) for every developer using the tool.
 
 ## Accepted risks (documented, not overlooked)

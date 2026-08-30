@@ -1,10 +1,10 @@
-// Package main starts printer-bridge.
+// Package main starts print-bridge.
 package main
 
 import (
 	"log"
 
-	"printer-bridge/internal/desktopapp"
+	"print-bridge/internal/desktopapp"
 )
 
 func main() {

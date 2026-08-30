@@ -55,7 +55,7 @@ As a user, I want invalid settings (e.g. out-of-range port) rejected before they
 ## E3 — Tray/GUI application
 
 **S3.1 — Main window with status and disclaimer**
-As a user, I want to see at a glance that printer-bridge is running and on what port, so that I can confirm it's ready before printing.
+As a user, I want to see at a glance that print-bridge is running and on what port, so that I can confirm it's ready before printing.
 - AC: Main window shows listener status (running/stopped) and current HTTP port.
 - AC: Non-affiliation disclaimer text (from `09-legal/disclaimer.md`) is visible on this screen without requiring a click.
 - AC: Buttons for Settings, Details, Help, View Logs, Quit are present and functional.
@@ -67,7 +67,7 @@ As a user, I want closing the main window to keep the app running in the tray, s
 - AC: Clicking the tray icon reopens/focuses the main window.
 
 **S3.3 — Quit terminates cleanly**
-As a user, I want Quit to fully stop printer-bridge, so that it's not silently running when I don't want it to be.
+As a user, I want Quit to fully stop print-bridge, so that it's not silently running when I don't want it to be.
 - AC: Quit from the main window and Quit from the tray menu both stop the HTTP listener and exit the process.
 - AC: No orphaned processes remain after Quit (verify via OS process list in testing).
 

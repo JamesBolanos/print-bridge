@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
-APP_NAME="printer-bridge"
+APP_NAME="print-bridge"
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   missing_linux_deps=()

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking a look at `printer-bridge`.
+Thanks for taking a look at `print-bridge`.
 
 This is a small Go desktop app, so contributions are easiest to review when
 they stay focused and include tests for behavior changes.
@@ -47,7 +47,7 @@ state.
 Bug reports are most useful when they include:
 
 - Operating system and version
-- printer-bridge version or commit
+- print-bridge version or commit
 - Printer model and connection details, if relevant
 - Steps to reproduce
 - Any relevant log lines from the app's View Logs window

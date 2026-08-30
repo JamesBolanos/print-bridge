@@ -8,10 +8,10 @@ shortcuts, no service registration, no auto-start entry.
 
 ## What the installer does
 
-- Copies the printer-bridge executable to `Program Files\printer-bridge\`.
+- Copies the print-bridge executable to `Program Files\print-bridge\`.
 - Creates Start Menu and Desktop shortcuts.
 - **Does not** register any Startup/auto-run entry, per ADR-001.
-- Sets the app's data directory (`%APPDATA%\PrinterBridge\`) on first run, not at install time — the app itself creates this on launch if absent.
+- Sets the app's data directory (`%APPDATA%\PrintBridge\`) on first run, not at install time — the app itself creates this on launch if absent.
 
 ## Signing status for the current beta
 
@@ -28,7 +28,7 @@ This is expected, not a bug. Documented workaround for end users (to be included
 1. When the SmartScreen dialog appears, click **"More info"**.
 2. A **"Run anyway"** button appears — click it to proceed with installation.
 
-This should be presented plainly and honestly in end-user-facing docs — e.g.: "printer-bridge is a free, independent tool and isn't yet code-signed. Windows will show a warning the first time you run the installer — this is expected for unsigned software, not a sign of a problem. Click 'More info' → 'Run anyway' to continue." Avoid burying this in fine print; a user who hits an unexplained security warning is likely to abandon the install rather than dig for docs.
+This should be presented plainly and honestly in end-user-facing docs — e.g.: "print-bridge is a free, independent tool and isn't yet code-signed. Windows will show a warning the first time you run the installer — this is expected for unsigned software, not a sign of a problem. Click 'More info' → 'Run anyway' to continue." Avoid burying this in fine print; a user who hits an unexplained security warning is likely to abandon the install rather than dig for docs.
 
 ## Out of scope for the current beta
 

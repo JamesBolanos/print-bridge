@@ -1,4 +1,4 @@
-# Architecture Overview — printer-bridge
+# Architecture Overview — print-bridge
 
 Read `01-business/constraints.md` and `03-architecture/decisions.md` alongside this document. This file describes *what* to build; `decisions.md` records *why* specific alternatives were rejected.
 
@@ -6,7 +6,7 @@ Read `01-business/constraints.md` and `03-architecture/decisions.md` alongside t
 
 ```mermaid
 flowchart LR
-    subgraph "printer-bridge (single binary)"
+    subgraph "print-bridge (single binary)"
         UI[Fyne GUI\nSettings window + tray icon]
         Core[HTTP Server\nGin router]
         Log[Rotating log writer]
@@ -33,7 +33,7 @@ flowchart LR
 
 ## Runtime model
 
-printer-bridge runs as a **single process** containing both the GUI (Fyne) and the HTTP server (Gin), on one goroutine tree:
+print-bridge runs as a **single process** containing both the GUI (Fyne) and the HTTP server (Gin), on one goroutine tree:
 
 - The HTTP server runs in its own goroutine, started when the app launches and stopped when the user quits.
 - The GUI event loop runs on the main thread, per Fyne's requirements.
@@ -59,7 +59,7 @@ These values are defaults; do not hardcode them so tightly that they can't be ad
 
 ## Logging
 
-- Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrinterBridge/` on macOS, `%APPDATA%\PrinterBridge\` on Windows).
+- Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrintBridge/` on macOS, `%APPDATA%\PrintBridge\` on Windows).
 - Log every request: timestamp, endpoint, target host:port, outcome (success/error), and error detail if applicable.
 - Rotation policy: cap individual log file size (e.g. 5MB) and retain a small number of rotated files (e.g. 3) — exact values are an implementation detail, not a business requirement, but must exist so logs don't grow unbounded on a machine left running for a long session.
 - Viewable live from within the app (see `05-ux/tray-app-spec.md`) — the user should not need to hunt through the filesystem to see recent activity.

@@ -1,10 +1,10 @@
-# Business Requirements Document — printer-bridge
+# Business Requirements Document — print-bridge
 
 Read `00-overview/project-brief.md` first. This document expands the brief into concrete business-level requirements. It does not define technical implementation — see `03-architecture/` for that.
 
 ## 1. Background
 
-Browser-based web apps often need to print to thermal/label printers by bypassing the OS print dialog, but browsers do not expose raw printer access directly. printer-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
+Browser-based web apps often need to print to thermal/label printers by bypassing the OS print dialog, but browsers do not expose raw printer access directly. print-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
 
 ## 2. Business goal
 
@@ -34,7 +34,7 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 **BR-6 — Predictable failure behavior.** If a printer is unreachable or a print job fails, the caller must receive a clear error response within a few seconds — not an indefinite hang. This is a business requirement, not just a technical one: integrators building user-facing print flows need to show their own users a timely error.
 
-**BR-7 — Transparent non-affiliation.** It must be unambiguous — in the app, the repository, and install docs — that printer-bridge is independent and not affiliated with, endorsed by, or supported by any printer manufacturer.
+**BR-7 — Transparent non-affiliation.** It must be unambiguous — in the app, the repository, and install docs — that print-bridge is independent and not affiliated with, endorsed by, or supported by any printer manufacturer.
 
 **BR-8 — Low support burden.** Given this is maintained by a single person alongside other work, the current beta must favor features that reduce support requests (clear errors, visible logs, install-workaround docs) over features that expand scope (multi-printer profiles, format conversion, auto-update).
 
@@ -52,7 +52,7 @@ Items in this list may become future backlog candidates — see `08-backlog/epic
 
 ## 6. Assumptions
 
-- Target printers are already on the same local network as the machine running printer-bridge and accept raw data on a TCP port (commonly 9100).
+- Target printers are already on the same local network as the machine running print-bridge and accept raw data on a TCP port (commonly 9100).
 - Integrators are comfortable making a same-machine HTTP call from their web app's JavaScript (i.e., they control the calling web app's origin and can add it to the CORS allow-list).
 - End users are willing to follow a short, documented workaround (a few clicks) to run an unsigned app — this is treated as acceptable friction for a free tool, not a blocker.
 

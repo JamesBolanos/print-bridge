@@ -1,4 +1,4 @@
-// Package logging writes rotating activity logs for printer-bridge.
+// Package logging writes rotating activity logs for print-bridge.
 package logging
 
 import (
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"printer-bridge/internal/activity"
+	"print-bridge/internal/activity"
 )
 
 const (
@@ -62,7 +62,7 @@ func (l *Logger) Record(entry activity.Entry) {
 		l.activity.Add(entry)
 	}
 	if err := l.writeLine(entry.LogLine()); err != nil {
-		log.Printf("printer-bridge log write failed: %v", err)
+		log.Printf("print-bridge log write failed: %v", err)
 	}
 }
 

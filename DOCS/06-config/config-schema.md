@@ -1,4 +1,4 @@
-# Config Schema — printer-bridge
+# Config Schema — print-bridge
 
 Read `05-ux/tray-app-spec.md` alongside this — that document defines how these fields are edited; this document defines what they are, where they live, and how they're validated.
 
@@ -8,8 +8,8 @@ A local JSON file, platform-appropriate path:
 
 | Platform | Path |
 |---|---|
-| macOS | `~/Library/Application Support/PrinterBridge/config.json` |
-| Windows | `%APPDATA%\PrinterBridge\config.json` |
+| macOS | `~/Library/Application Support/PrintBridge/config.json` |
+| Windows | `%APPDATA%\PrintBridge\config.json` |
 
 Rationale: a plain file, not a database, per the "few moving parts" architectural value in `03-architecture/architecture-overview.md`. JSON chosen over YAML/TOML since Go's standard library handles it with no extra dependency, and there's no need for human hand-editing to be especially pleasant — the Settings UI is the intended edit path.
 

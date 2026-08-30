@@ -12,5 +12,5 @@ var iconPNG []byte
 
 // AppIcon returns the embedded application icon as a Fyne resource.
 func AppIcon() fyne.Resource {
-	return fyne.NewStaticResource("printer-bridge.png", iconPNG)
+	return fyne.NewStaticResource("print-bridge.png", iconPNG)
 }

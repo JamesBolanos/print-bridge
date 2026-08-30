@@ -1,13 +1,13 @@
-# printer-bridge — Project Documentation
+# print-bridge — Project Documentation
 
 This folder contains the planning and technical documentation for
-**printer-bridge**, a free, standalone local print agent for macOS and Windows.
+**print-bridge**, a free, standalone local print agent for macOS and Windows.
 Every file is written to stand on its own, so the project can be reviewed
 without private context.
 
 ## What this project is
 
-A local desktop application that lets any web app send print jobs to a network-connected thermal/label printer without going through the OS print dialog. printer-bridge is vendor-neutral and **not affiliated with or endorsed by any printer manufacturer** — see `09-legal/disclaimer.md`.
+A local desktop application that lets any web app send print jobs to a network-connected thermal/label printer without going through the OS print dialog. print-bridge is vendor-neutral and **not affiliated with or endorsed by any printer manufacturer** — see `09-legal/disclaimer.md`.
 
 The current beta combines a localhost HTTP API, raw TCP printer passthrough,
 desktop configuration UI, tray behavior, local logging, and release packaging

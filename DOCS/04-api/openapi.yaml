@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: printer-bridge Local API
+  title: print-bridge Local API
   version: "1.0.0"
   description: >
-    Local HTTP API exposed by printer-bridge on the user's machine. Called by
+    Local HTTP API exposed by print-bridge on the user's machine. Called by
     browser-based web apps to send raw print data to a network-connected
     printer, and to check printer/agent status. This spec is the
     authoritative source of truth for request/response shapes — prose
@@ -12,7 +12,7 @@ info:
     02-process/bpmn-print-job-flow.md for the end-to-end flow.
 servers:
   - url: http://localhost:{port}
-    description: Local printer-bridge instance. Port is user-configured (see 06-config/config-schema.md); default shown here.
+    description: Local print-bridge instance. Port is user-configured (see 06-config/config-schema.md); default shown here.
     variables:
       port:
         default: "8080"
@@ -22,7 +22,7 @@ paths:
     get:
       operationId: ping
       summary: Liveness check
-      description: Confirms the printer-bridge agent is running and reachable. Does not check printer connectivity — use /status for that.
+      description: Confirms the print-bridge agent is running and reachable. Does not check printer connectivity — use /status for that.
       responses:
         "200":
           description: Agent is running.

@@ -1,4 +1,4 @@
-# Architecture Decision Log — printer-bridge
+# Architecture Decision Log — print-bridge
 
 Each entry records a decision, the alternatives considered, and why the
 alternative was rejected for the current beta. **Read this before proposing any
@@ -9,7 +9,7 @@ to fill in.
 
 ## ADR-001: Manual launch, not auto-start on login
 
-**Decision:** printer-bridge does not register as a startup item (no macOS LaunchAgent, no Windows Startup registry entry). The user opens it manually when needed.
+**Decision:** print-bridge does not register as a startup item (no macOS LaunchAgent, no Windows Startup registry entry). The user opens it manually when needed.
 
 **Alternatives considered:**
 - Menu bar/tray app with auto-start — originally the default assumption, since "always available" is the natural expectation for a tray app.
@@ -34,9 +34,9 @@ to fill in.
 
 ---
 
-## ADR-003: Unsigned installers for the current beta, no paid certificates
+## ADR-003: Free ad-hoc signing only for the current beta
 
-**Decision:** No macOS notarization (Apple Developer Program) and no Windows code-signing certificate for the current beta. Both installers ship unsigned, with documented user-facing workarounds for the resulting OS warnings.
+**Decision:** The current beta does not require macOS notarization (Apple Developer Program) or a Windows code-signing certificate. The macOS release workflow applies free ad-hoc signing to make the app bundle structurally valid, then documents the Gatekeeper/quarantine workaround for downloaded builds.
 
 **Alternatives considered:**
 - Pay for both certificates upfront as part of the current beta build cost.
@@ -44,7 +44,7 @@ to fill in.
 
 **Why rejected:** Explicit budget constraint (`01-business/constraints.md`) — this is a free showcase project with no committed revenue to justify ~$300–500/yr in certificate costs before it's proven to have an audience. Manual-launch-only design (ADR-001) reduces the downside of shipping unsigned, since the app isn't silently running in the background — the OS warning appears once, at a moment the user is actively choosing to open the app.
 
-**Do not reintroduce without:** the project owner deciding to invest in signing, typically once there's evidence of real usage/demand justifying the cost. This is a "when it's worth it" backlog item, not a technical blocker being worked around.
+**Do not require paid signing without:** the project owner deciding to invest in signing, typically once there's evidence of real usage/demand justifying the cost. Keep the free ad-hoc signing and verification step in CI so the app bundle is not structurally invalid.
 
 ---
 

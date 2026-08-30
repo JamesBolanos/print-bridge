@@ -1,4 +1,4 @@
-// Package config loads, validates, and saves printer-bridge settings.
+// Package config loads, validates, and saves print-bridge settings.
 package config
 
 import (
@@ -13,13 +13,13 @@ import (
 
 const (
 	// AppID is the stable desktop application identifier.
-	AppID = "com.jbolanosdiaz.printerbridge"
+	AppID = "com.jbolanosdiaz.printbridge"
 	// AppName is the internal application name used in packaging and paths.
-	AppName = "printer-bridge"
+	AppName = "print-bridge"
 	// AppDisplayName is the user-facing application name.
-	AppDisplayName = "printer-bridge"
+	AppDisplayName = "print-bridge"
 	// AppDataDirName is the folder created under the user's config directory.
-	AppDataDirName = "PrinterBridge"
+	AppDataDirName = "PrintBridge"
 
 	// DefaultHTTPPort is the localhost port used by the bridge on first run.
 	DefaultHTTPPort = 8080
@@ -30,7 +30,7 @@ const (
 // DefaultAllowedOrigins is intentionally empty so new installs deny browser CORS requests.
 var DefaultAllowedOrigins = []string{}
 
-// Config contains the persisted printer bridge settings.
+// Config contains the persisted print bridge settings.
 type Config struct {
 	HTTPPort              int      `json:"httpPort"`
 	DefaultPrinterPort    int      `json:"defaultPrinterPort"`
@@ -82,7 +82,7 @@ func LogPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "printer-bridge.log"), nil
+	return filepath.Join(dir, "print-bridge.log"), nil
 }
 
 // LoadOrCreate reads config from path or creates a default config when missing.

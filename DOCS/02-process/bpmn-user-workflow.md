@@ -1,12 +1,12 @@
 # Process — User Workflow
 
-This describes the end user's lifecycle with the printer-bridge application itself, independent of any single print job. See `05-ux/tray-app-spec.md` for exact UI states and screens.
+This describes the end user's lifecycle with the print-bridge application itself, independent of any single print job. See `05-ux/tray-app-spec.md` for exact UI states and screens.
 
 ## App lifecycle
 
 ```mermaid
 flowchart TD
-    Start([User launches printer-bridge]) --> First{First launch?}
+    Start([User launches print-bridge]) --> First{First launch?}
     First -- Yes --> Defaults[Load default settings\nHTTP port, printer port]
     First -- No --> Saved[Load saved settings]
     Defaults --> Listen

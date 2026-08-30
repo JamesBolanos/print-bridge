@@ -33,10 +33,10 @@ The default view when the app is open.
 - App logo, using the project icon asset.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
 - Runtime details: default printer address/port and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings. Do not repeat the listener address here; the status row already owns listener status.
-- Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
+- Non-affiliation disclaimer, always visible, short form: "print-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
 - Buttons/links: **Settings**, **Details**, **Help**, **View Logs**, **Quit**
 
-**Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("printer-bridge is still running in the tray") so the user isn't confused about whether the app exited.
+**Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("print-bridge is still running in the tray") so the user isn't confused about whether the app exited.
 
 ### 2. Settings
 
@@ -97,7 +97,7 @@ Persistent while the app is running (whether the main window is open or minimize
 **Left-click / click:** opens or focuses the main window.
 
 **Right-click menu (or platform-equivalent):**
-- Open printer-bridge (same as click)
+- Open print-bridge (same as click)
 - Details
 - Help
 - Status: shows a non-interactive line, e.g. "HTTP: 127.0.0.1:8080" or "Stopped" if the listener failed to start

@@ -1,6 +1,6 @@
-# printer-bridge
+# print-bridge
 
-`printer-bridge` is a local desktop bridge that lets browser-based web apps send raw print jobs to network-connected thermal and label printers without using the operating system print dialog.
+`print-bridge` is a local desktop bridge that lets browser-based web apps send raw print jobs to network-connected thermal and label printers without using the operating system print dialog.
 
 It runs as a small desktop tray app, exposes a localhost HTTP API, and forwards raw printer-language text such as ZPL, EPL, or CPCL to a network printer over TCP.
 
@@ -34,14 +34,14 @@ The `DOCS/` folder defines the product scope, API contract, architecture, securi
 - Printer reachability checks.
 - Explicit TCP connect/write timeouts so failures return quickly.
 - Local rotating logs, viewable from the app.
-- Unsigned Windows and macOS installers with clear user-facing installation guidance.
+- Windows and macOS installers with free macOS ad-hoc signing and clear user-facing installation guidance for unsigned downloads.
 
 ## What It Does Not Do
 
 - Not affiliated with, endorsed by, sponsored by, or connected to any printer manufacturer.
 - Not an official replacement for any vendor product.
 - Not a background service that starts automatically on login.
-- Not code-signed or notarized in the current beta.
+- Not Developer ID signed or notarized.
 - Not an authentication system beyond CORS allow-listing.
 - Not a PDF/image-to-ZPL converter.
 - Not a multi-printer profile manager.
@@ -93,7 +93,7 @@ Build a local binary:
 ./scripts/build-releases.sh
 ```
 
-The binary is written to `dist/printer-bridge`.
+The binary is written to `dist/print-bridge`.
 
 ## Local API
 
@@ -117,11 +117,11 @@ curl -X POST http://localhost:8080/print \
   }'
 ```
 
-`printer-bridge` passes the `text` payload through as-is. The calling web app is responsible for generating valid printer-language data such as ZPL, EPL, or CPCL.
+`print-bridge` passes the `text` payload through as-is. The calling web app is responsible for generating valid printer-language data such as ZPL, EPL, or CPCL.
 
 ## Security Model
 
-`printer-bridge` is designed as a localhost desktop bridge. Browser access is controlled through a configured CORS allow-list. This keeps integration simple for web developers while matching the trust model commonly used by local browser-to-printer bridge tools.
+`print-bridge` is designed as a localhost desktop bridge. Browser access is controlled through a configured CORS allow-list. This keeps integration simple for web developers while matching the trust model commonly used by local browser printing bridge tools.
 
 Important limits:
 
@@ -134,10 +134,10 @@ See [`DOCS/03-architecture/security-model.md`](DOCS/03-architecture/security-mod
 
 ## Configuration
 
-On first launch, `printer-bridge` creates a local `config.json` file:
+On first launch, `print-bridge` creates a local `config.json` file:
 
-- macOS: `~/Library/Application Support/PrinterBridge/config.json`
-- Windows: `%APPDATA%\PrinterBridge\config.json`
+- macOS: `~/Library/Application Support/PrintBridge/config.json`
+- Windows: `%APPDATA%\PrintBridge\config.json`
 
 New installs start with an empty CORS allow-list:
 
@@ -149,9 +149,9 @@ Add only the web app origins this installation needs from the Settings screen. F
 
 ## Support And Feedback
 
-`printer-bridge` is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.
+`print-bridge` is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.
 
-If `printer-bridge` saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos).
+If `print-bridge` saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos).
 
 ## Contributing
 
@@ -169,7 +169,7 @@ Completed beta foundation:
 - Config persistence
 - Live log viewer for recent activity
 - Fyne tray/menu bar UI
-- App identity: `com.jbolanosdiaz.printerbridge`
+- App identity: `com.jbolanosdiaz.printbridge`
 - Initial app icon
 - Native CI/release workflow definitions
 
@@ -190,11 +190,11 @@ Remaining validation before public release should focus on real Windows MSI exec
 
 ## Non-Affiliation
 
-`printer-bridge` is an independent, open project created to provide a free bridge for browser-to-printer communication. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with any printer manufacturer. Product names and marks belong to their respective owners and are referenced only for descriptive compatibility context.
+`print-bridge` is an independent, open project created to provide a free bridge for browser-to-printer communication. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with any printer manufacturer. Product names and marks belong to their respective owners and are referenced only for descriptive compatibility context.
 
 ## Fork Attribution
 
-`printer-bridge` is fork-derived from earlier BSD 3-Clause licensed work by
+`print-bridge` is fork-derived from earlier BSD 3-Clause licensed work by
 LabelZoom and has since been substantially modified. See [`NOTICE.md`](NOTICE.md)
 for attribution.
 

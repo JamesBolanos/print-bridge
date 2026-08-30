@@ -1,18 +1,18 @@
-# Project Brief — printer-bridge
+# Project Brief — print-bridge
 
 ## Problem
 
-Web applications that need to print to thermal/label printers (barcode labels, shipping labels, receipts) cannot do so directly — browsers don't expose raw printer access, and OS print dialogs don't support the raw printer languages (ZPL, EPL, CPCL) these devices use. printer-bridge fills this gap by running a local desktop bridge that browser JavaScript can call.
+Web applications that need to print to thermal/label printers (barcode labels, shipping labels, receipts) cannot do so directly — browsers don't expose raw printer access, and OS print dialogs don't support the raw printer languages (ZPL, EPL, CPCL) these devices use. print-bridge fills this gap by running a local desktop bridge that browser JavaScript can call.
 
 ## Goal
 
-Build **printer-bridge**: a small, free, locally-run desktop application for macOS and Windows that any web app can call (via a local HTTP API) to send raw print data to a network-connected printer. It is a generic bridge, not tied to a specific web app or printer brand — the target printer's IP and port are configurable per print job.
+Build **print-bridge**: a small, free, locally-run desktop application for macOS and Windows that any web app can call (via a local HTTP API) to send raw print data to a network-connected printer. It is a generic bridge, not tied to a specific web app or printer brand — the target printer's IP and port are configurable per print job.
 
 This is released as a free showcase project — not a commercial product, not a paid support offering.
 
 ## Non-affiliation
 
-printer-bridge is an independent, unofficial project. It is **not affiliated with, endorsed by, or connected to any printer manufacturer**. This must be stated in the application UI, the repository, and installation instructions. See `09-legal/disclaimer.md` for the exact text to use.
+print-bridge is an independent, unofficial project. It is **not affiliated with, endorsed by, or connected to any printer manufacturer**. This must be stated in the application UI, the repository, and installation instructions. See `09-legal/disclaimer.md` for the exact text to use.
 
 ## What The Current Beta Is
 
@@ -23,12 +23,12 @@ printer-bridge is an independent, unofficial project. It is **not affiliated wit
 - CORS-based browser access control, matching the common trust model used by local desktop bridge tools.
 - Socket-level write/read timeout so an unreachable printer fails fast instead of hanging.
 - Local rotating log file, viewable from within the app.
-- Unsigned installers for both platforms (`.msi` via WiX Toolset on Windows, `.dmg` on macOS), with documented user-facing workarounds for the resulting OS security warnings.
+- Installers for both platforms (`.msi` via WiX Toolset on Windows, `.dmg` on macOS), with free macOS ad-hoc signing and documented user-facing workarounds for unsigned downloads.
 
 ## What The Current Beta Explicitly Is Not
 
 - **Not auto-starting on login.** The user opens it when needed; it does not register as a background/startup item.
-- **Not code-signed or notarized.** No paid Apple Developer or Windows signing certificate in the current beta — this is a documented, accepted trade-off for a free tool, not an oversight.
+- **No paid signing required.** No paid Apple Developer or Windows signing certificate is required for the current release path — this is a documented, accepted trade-off for a free tool, not an oversight.
 - **Not authenticated beyond CORS.** No API key/token layer in the current beta.
 - **Not a format converter.** It passes raw printer-language text through as-is; it does not convert PDFs or images to ZPL/EPL.
 - **Not multi-printer-profile management.** The caller supplies the target IP/port per request; there's no saved address book in the current beta.

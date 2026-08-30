@@ -17,14 +17,14 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"printer-bridge/internal/activity"
-	"printer-bridge/internal/assets"
-	"printer-bridge/internal/config"
-	"printer-bridge/internal/logging"
-	"printer-bridge/internal/server"
+	"print-bridge/internal/activity"
+	"print-bridge/internal/assets"
+	"print-bridge/internal/config"
+	"print-bridge/internal/logging"
+	"print-bridge/internal/server"
 )
 
-const disclaimer = "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer."
+const disclaimer = "print-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer."
 
 type application struct {
 	app          fyne.App
@@ -101,7 +101,7 @@ func Run() error {
 
 func (a *application) mainContent() fyne.CanvasObject {
 	title := widget.NewLabelWithStyle(config.AppDisplayName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	subtitle := widget.NewLabel("Local browser-to-printer bridge")
+	subtitle := widget.NewLabel("Local browser printing bridge")
 	logo := canvas.NewImageFromResource(assets.AppIcon())
 	logo.FillMode = canvas.ImageFillContain
 	logoHolder := container.NewGridWrap(fyne.NewSize(96, 96), logo)
@@ -132,7 +132,7 @@ func (a *application) mainContent() fyne.CanvasObject {
 		if !a.closeNotice {
 			a.closeNotice = true
 			a.app.SendNotification(&fyne.Notification{
-				Title:   "printer-bridge is still running",
+				Title:   "print-bridge is still running",
 				Content: "Use the tray icon or menu to reopen it, or choose Quit to stop the listener.",
 			})
 		}
@@ -166,7 +166,7 @@ func (a *application) updateTrayMenu() {
 	}
 
 	desktopApp.SetSystemTrayMenu(fyne.NewMenu(config.AppDisplayName,
-		fyne.NewMenuItem("Open printer-bridge", func() {
+		fyne.NewMenuItem("Open print-bridge", func() {
 			a.window.Show()
 		}),
 		fyne.NewMenuItem("Details", a.showDetails),
@@ -247,7 +247,7 @@ func (a *application) showSettings() {
 		settingsFormItem(
 			"HTTP port",
 			httpPortEntry,
-			"Local port used by web apps to reach printer-bridge. Use 8080 unless another app is already using it.",
+			"Local port used by web apps to reach print-bridge. Use 8080 unless another app is already using it.",
 		),
 		settingsFormItem(
 			"Default printer port",
@@ -262,7 +262,7 @@ func (a *application) showSettings() {
 		settingsFormItem(
 			"Allowed origins",
 			originsEntry,
-			"Website addresses allowed to use printer-bridge from a browser. One per line, no page path.",
+			"Website addresses allowed to use print-bridge from a browser. One per line, no page path.",
 		),
 	)
 
@@ -386,7 +386,7 @@ func (a *application) helpText() string {
 		"# Help",
 		"",
 		"## If Nothing Prints",
-		"- Make sure printer-bridge says it is listening.",
+		"- Make sure print-bridge says it is listening.",
 		"- Make sure the printer is powered on and connected to the network.",
 		"- Check the printer IP address or hostname.",
 		"- Check the printer port. Many network printers use port 9100, but your printer may use a different one.",
@@ -395,9 +395,9 @@ func (a *application) helpText() string {
 		"",
 		"## If The Website Cannot Connect",
 		"- Check Allowed origins in Settings.",
-		"- An allowed origin is the website address that may use printer-bridge.",
+		"- An allowed origin is the website address that may use print-bridge.",
 		"- This is different from the printer IP address.",
-		"- Add the exact website address that is allowed to use printer-bridge.",
+		"- Add the exact website address that is allowed to use print-bridge.",
 		"- Include the beginning, such as http:// or https://.",
 		"- Include the port if the website uses one.",
 		"- Do not include the page path after the address.",
@@ -407,7 +407,7 @@ func (a *application) helpText() string {
 		"Only add websites you trust. If no origins are configured, websites cannot connect.",
 		"",
 		"## Check These Values",
-		"- printer-bridge address: `http://" + listener + "`",
+		"- print-bridge address: `http://" + listener + "`",
 		"- Default printer address: `" + displayValue(a.cfg.DefaultPrinterAddress, "Not set") + "`",
 		"- Default printer port: `" + strconv.Itoa(a.cfg.DefaultPrinterPort) + "`",
 		"- Allowed origins: " + displayOriginsForHelp(a.cfg.AllowedOrigins),
@@ -417,9 +417,9 @@ func (a *application) helpText() string {
 		"- Open View Logs to see recent connection or printing errors.",
 		"",
 		"## Support And Feedback",
-		"printer-bridge is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.",
+		"print-bridge is built by [Jaime Bolaños](https://jbolanos.dev) as a practical tool for teams that need browser apps to reach local printers. If you need help setting it up, find something confusing, or have an idea that would make it better, I'll be glad to help.",
 		"",
-		"If printer-bridge saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos)",
+		"If print-bridge saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos)",
 	}, "\n")
 }
 

@@ -1,4 +1,4 @@
-module printer-bridge
+module print-bridge
 
 go 1.24.0
 
