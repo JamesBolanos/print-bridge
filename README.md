@@ -1,6 +1,6 @@
 # printer-bridge
 
-`printer-bridge` is a free, local desktop bridge that lets browser-based web apps send raw print jobs to network-connected thermal and label printers without using the operating system print dialog.
+`printer-bridge` is a local desktop bridge that lets browser-based web apps send raw print jobs to network-connected thermal and label printers without using the operating system print dialog.
 
 It runs as a small desktop tray app, exposes a localhost HTTP API, and forwards raw printer-language text such as ZPL, EPL, or CPCL to a network printer over TCP.
 
