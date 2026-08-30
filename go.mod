@@ -1,15 +1,13 @@
 module printer-bridge
 
-go 1.24.0
-
-toolchain go1.24.5
+go 1.25.0
 
 require (
 	fyne.io/fyne/v2 v2.8.1
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sys v0.38.0
+	golang.org/x/sys v0.47.0
 )
 
 require (
