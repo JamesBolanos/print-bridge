@@ -2,7 +2,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package
     Name="printer-bridge"
-    Manufacturer="J Bolanos Diaz"
+    Manufacturer="Jaime Bolanos Diaz"
     Version="$(var.ProductVersion)"
     UpgradeCode="{6D03A942-AE7C-4B34-B0C4-05EC34F26C87}"
     Scope="perMachine">

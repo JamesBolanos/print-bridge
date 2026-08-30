@@ -1,3 +1,4 @@
+// Package assets embeds application resources.
 package assets
 
 import (
@@ -9,6 +10,7 @@ import (
 //go:embed icon.png
 var iconPNG []byte
 
+// AppIcon returns the embedded application icon as a Fyne resource.
 func AppIcon() fyne.Resource {
 	return fyne.NewStaticResource("printer-bridge.png", iconPNG)
 }

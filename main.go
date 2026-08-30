@@ -1,3 +1,4 @@
+// Package main starts printer-bridge.
 package main
 
 import (

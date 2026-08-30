@@ -60,7 +60,7 @@ func TestConfiguredAllowedOriginReceivesCORSHeader(t *testing.T) {
 func TestPrintDefaultsToConfiguredPrinterPort(t *testing.T) {
 	conn := &captureConn{}
 	var dialed string
-	router := testRouter(t, func(ctx context.Context, network string, address string) (net.Conn, error) {
+	router := testRouter(t, func(_ context.Context, _ string, address string) (net.Conn, error) {
 		dialed = address
 		return conn, nil
 	})
@@ -80,7 +80,7 @@ func TestPrintDefaultsToConfiguredPrinterPort(t *testing.T) {
 func TestPrintUsesRequestPrinterPort(t *testing.T) {
 	conn := &captureConn{}
 	var dialed string
-	router := testRouter(t, func(ctx context.Context, network string, address string) (net.Conn, error) {
+	router := testRouter(t, func(_ context.Context, _ string, address string) (net.Conn, error) {
 		dialed = address
 		return conn, nil
 	})
@@ -94,6 +94,19 @@ func TestPrintUsesRequestPrinterPort(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "printer.local:9101", dialed)
 	assert.Equal(t, "DATA", conn.buf.String())
+}
+
+func TestPrintRejectsInvalidPrinterPort(t *testing.T) {
+	router := testRouter(t, nil)
+
+	body := `{"printerHostname":"printer.local","printerPort":70000,"text":"DATA"}`
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/print", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, responseMessage(t, w), "printerPort")
 }
 
 func TestPrintInvalidJSON(t *testing.T) {
@@ -134,7 +147,7 @@ func TestPrintMissingRequiredFields(t *testing.T) {
 }
 
 func TestPrintConnectionFailureReturnsBadGateway(t *testing.T) {
-	router := testRouter(t, func(ctx context.Context, network string, address string) (net.Conn, error) {
+	router := testRouter(t, func(_ context.Context, _ string, _ string) (net.Conn, error) {
 		return nil, errors.New("dial failed")
 	})
 
@@ -148,8 +161,23 @@ func TestPrintConnectionFailureReturnsBadGateway(t *testing.T) {
 	assert.Contains(t, responseMessage(t, w), "error connecting to printer")
 }
 
+func TestPrintWriteFailureReturnsInternalServerError(t *testing.T) {
+	router := testRouter(t, func(_ context.Context, _ string, _ string) (net.Conn, error) {
+		return &captureConn{writeErr: errors.New("write failed")}, nil
+	})
+
+	body := `{"printerHostname":"printer.local","text":"DATA"}`
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/print", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, responseMessage(t, w), "error sending data to printer")
+}
+
 func TestStatusReachable(t *testing.T) {
-	router := testRouter(t, func(ctx context.Context, network string, address string) (net.Conn, error) {
+	router := testRouter(t, func(_ context.Context, _ string, _ string) (net.Conn, error) {
 		return &captureConn{}, nil
 	})
 
@@ -162,7 +190,7 @@ func TestStatusReachable(t *testing.T) {
 }
 
 func TestStatusUnreachableStillReturnsOK(t *testing.T) {
-	router := testRouter(t, func(ctx context.Context, network string, address string) (net.Conn, error) {
+	router := testRouter(t, func(_ context.Context, _ string, _ string) (net.Conn, error) {
 		return nil, errors.New("connection refused")
 	})
 
@@ -185,6 +213,17 @@ func TestStatusRequiresHost(t *testing.T) {
 	assert.Contains(t, responseMessage(t, w), "host")
 }
 
+func TestStatusRejectsInvalidPort(t *testing.T) {
+	router := testRouter(t, nil)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/status?host=printer.local&port=bad", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, responseMessage(t, w), "port")
+}
+
 func TestServerBindsToLocalhost(t *testing.T) {
 	cfg := config.Default()
 	cfg.HTTPPort = freePort(t)
@@ -192,13 +231,34 @@ func TestServerBindsToLocalhost(t *testing.T) {
 	srv := New(cfg, nil)
 	require.NoError(t, srv.Start())
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	defer srv.Stop(ctx)
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		require.NoError(t, srv.Stop(ctx))
+	})
 
 	status := srv.Status()
 	assert.True(t, status.Running)
 	assert.Equal(t, net.JoinHostPort("127.0.0.1", strconv.Itoa(cfg.HTTPPort)), status.Address)
+}
+
+func TestServerRestartUsesNewConfig(t *testing.T) {
+	cfg := config.Default()
+	cfg.HTTPPort = freePort(t)
+
+	srv := New(cfg, nil)
+	require.NoError(t, srv.Start())
+	t.Cleanup(func() {
+		require.NoError(t, srv.Stop(context.Background()))
+	})
+
+	nextCfg := config.Default()
+	nextCfg.HTTPPort = freePort(t)
+	require.NoError(t, srv.Restart(nextCfg))
+
+	status := srv.Status()
+	assert.True(t, status.Running)
+	assert.Equal(t, net.JoinHostPort("127.0.0.1", strconv.Itoa(nextCfg.HTTPPort)), status.Address)
 }
 
 func testRouter(t *testing.T, dial DialContextFunc) *gin.Engine {
@@ -228,10 +288,10 @@ func freePort(t *testing.T) int {
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer ln.Close()
 
 	_, portString, err := net.SplitHostPort(ln.Addr().String())
 	require.NoError(t, err)
+	require.NoError(t, ln.Close())
 
 	port, err := strconv.Atoi(portString)
 	require.NoError(t, err)
@@ -239,17 +299,23 @@ func freePort(t *testing.T) int {
 }
 
 type captureConn struct {
-	buf bytes.Buffer
+	buf      bytes.Buffer
+	writeErr error
 }
 
-func (c *captureConn) Read(b []byte) (int, error)         { return 0, errors.New("not implemented") }
-func (c *captureConn) Write(b []byte) (int, error)        { return c.buf.Write(b) }
+func (c *captureConn) Read(_ []byte) (int, error) { return 0, errors.New("not implemented") }
+func (c *captureConn) Write(b []byte) (int, error) {
+	if c.writeErr != nil {
+		return 0, c.writeErr
+	}
+	return c.buf.Write(b)
+}
 func (c *captureConn) Close() error                       { return nil }
 func (c *captureConn) LocalAddr() net.Addr                { return dummyAddr("local") }
 func (c *captureConn) RemoteAddr() net.Addr               { return dummyAddr("remote") }
-func (c *captureConn) SetDeadline(t time.Time) error      { return nil }
-func (c *captureConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c *captureConn) SetWriteDeadline(t time.Time) error { return nil }
+func (c *captureConn) SetDeadline(_ time.Time) error      { return nil }
+func (c *captureConn) SetReadDeadline(_ time.Time) error  { return nil }
+func (c *captureConn) SetWriteDeadline(_ time.Time) error { return nil }
 
 type dummyAddr string
 

@@ -58,3 +58,20 @@ func TestLoadOrCreateRestoresDefaultsForMalformedConfig(t *testing.T) {
 	assert.NotEmpty(t, result.Warning)
 	assert.Equal(t, Default(), cfg)
 }
+
+func TestLoadOrCreateRestoresDefaultsForInvalidConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	require.NoError(t, os.WriteFile(path, []byte(`{
+		"httpPort": 8080,
+		"defaultPrinterPort": 9100,
+		"defaultPrinterAddress": "",
+		"allowedOrigins": ["https://app.example.com/orders"]
+	}`), 0o644))
+
+	cfg, result, err := LoadOrCreate(path)
+
+	require.NoError(t, err)
+	assert.True(t, result.UsedDefaults)
+	assert.NotEmpty(t, result.Warning)
+	assert.Equal(t, Default(), cfg)
+}

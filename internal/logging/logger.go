@@ -1,3 +1,4 @@
+// Package logging writes rotating activity logs for printer-bridge.
 package logging
 
 import (
@@ -12,10 +13,13 @@ import (
 )
 
 const (
-	DefaultMaxBytes   int64 = 5 * 1024 * 1024
-	DefaultMaxBackups       = 3
+	// DefaultMaxBytes is the default maximum size for one log file.
+	DefaultMaxBytes int64 = 5 * 1024 * 1024
+	// DefaultMaxBackups is the default number of rotated log files retained.
+	DefaultMaxBackups = 3
 )
 
+// Logger writes activity entries to disk and optionally mirrors them in memory.
 type Logger struct {
 	path       string
 	maxBytes   int64
@@ -24,6 +28,7 @@ type Logger struct {
 	mu         sync.Mutex
 }
 
+// New creates a rotating activity logger.
 func New(path string, maxBytes int64, maxBackups int, activityStore *activity.Store) *Logger {
 	if maxBytes <= 0 {
 		maxBytes = DefaultMaxBytes
@@ -40,6 +45,7 @@ func New(path string, maxBytes int64, maxBackups int, activityStore *activity.St
 	}
 }
 
+// Path returns the active log file path.
 func (l *Logger) Path() string {
 	if l == nil {
 		return ""
@@ -47,6 +53,7 @@ func (l *Logger) Path() string {
 	return l.path
 }
 
+// Record writes an activity entry to the in-memory store and log file.
 func (l *Logger) Record(entry activity.Entry) {
 	if l == nil {
 		return
@@ -59,6 +66,7 @@ func (l *Logger) Record(entry activity.Entry) {
 	}
 }
 
+// ReadLinesNewestFirst returns recent log lines with the newest line first.
 func (l *Logger) ReadLinesNewestFirst(limit int) ([]string, error) {
 	if l == nil || l.path == "" {
 		return nil, nil
@@ -108,10 +116,11 @@ func (l *Logger) writeLine(line string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-
-	_, err = file.WriteString(line)
-	return err
+	if _, err = file.WriteString(line); err != nil {
+		_ = file.Close()
+		return err
+	}
+	return file.Close()
 }
 
 func (l *Logger) rotateIfNeeded(incoming int64) error {

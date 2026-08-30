@@ -1,3 +1,4 @@
+// Package activity models recent bridge events for logs and diagnostics.
 package activity
 
 import (
@@ -7,6 +8,7 @@ import (
 	"time"
 )
 
+// Entry describes one bridge activity event.
 type Entry struct {
 	Timestamp time.Time
 	Endpoint  string
@@ -15,6 +17,7 @@ type Entry struct {
 	Detail    string
 }
 
+// String returns a compact human-readable representation of an activity entry.
 func (e Entry) String() string {
 	parts := []string{
 		e.Timestamp.Format("2006-01-02 15:04:05"),
@@ -30,6 +33,7 @@ func (e Entry) String() string {
 	return strings.Join(parts, " | ")
 }
 
+// LogLine returns the stable single-line text written to the rotating log file.
 func (e Entry) LogLine() string {
 	return fmt.Sprintf(
 		"%s endpoint=%s target=%q outcome=%s detail=%q\n",
@@ -48,12 +52,14 @@ func sanitize(value string) string {
 	return strings.TrimSpace(value)
 }
 
+// Store keeps the newest in-memory activity entries for quick inspection.
 type Store struct {
 	mu      sync.Mutex
 	limit   int
 	entries []Entry
 }
 
+// NewStore creates a bounded in-memory activity store.
 func NewStore(limit int) *Store {
 	if limit <= 0 {
 		limit = 50
@@ -61,6 +67,7 @@ func NewStore(limit int) *Store {
 	return &Store{limit: limit}
 }
 
+// Add records an entry as the newest activity item.
 func (s *Store) Add(entry Entry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -71,6 +78,7 @@ func (s *Store) Add(entry Entry) {
 	}
 }
 
+// List returns a snapshot of activity entries from newest to oldest.
 func (s *Store) List() []Entry {
 	s.mu.Lock()
 	defer s.mu.Unlock()

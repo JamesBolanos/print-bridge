@@ -6,6 +6,10 @@ This repository is the v1 evolution of the original Go beta: the working HTTP-to
 
 ## Project Status
 
+Current status: **pre-release v1 beta**. The core app, local API, config,
+logging, and release workflow are in place; public release validation should
+still include real macOS and Windows installer testing.
+
 This repository currently contains:
 
 - A Fyne desktop app for macOS and Windows.
@@ -54,6 +58,17 @@ Run tests:
 
 ```bash
 go test ./...
+```
+
+Common development checks:
+
+```bash
+make fmt    # format Go code with gofmt
+make test   # run all tests
+make vet    # run Go's standard static checks
+make race   # run tests with the race detector
+make lint   # run golangci-lint, if installed
+make check  # run fmt, test, vet, and race
 ```
 
 Run the app:
@@ -130,6 +145,12 @@ Add only the web app origins this installation needs from the Settings screen. F
 
 If `printer-bridge` saves you time, a GitHub star on the project or a follow is appreciated: [github.com/JamesBolanos](https://github.com/JamesBolanos).
 
+## Contributing
+
+Issues and pull requests are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md)
+for the development workflow and [`SECURITY.md`](SECURITY.md) for responsible
+security reporting.
+
 ## Development Roadmap
 
 Completed v1 foundation:
@@ -162,6 +183,12 @@ Remaining validation before public release should focus on real Windows MSI exec
 ## Non-Affiliation
 
 `printer-bridge` is an independent, open project created to provide a free bridge for browser-to-printer communication. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with any printer manufacturer. Product names and marks belong to their respective owners and are referenced only for descriptive compatibility context.
+
+## Fork Attribution
+
+`printer-bridge` is fork-derived from earlier BSD 3-Clause licensed work by
+LabelZoom and has since been substantially modified. See [`NOTICE.md`](NOTICE.md)
+for attribution.
 
 ## License
 

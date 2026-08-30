@@ -1,3 +1,5 @@
+// Package server provides the localhost HTTP API that browser apps use to
+// reach network printers.
 package server
 
 import (
@@ -20,12 +22,19 @@ import (
 )
 
 const (
+	// DefaultConnectTimeout limits how long the bridge waits to reach a printer.
 	DefaultConnectTimeout = 3 * time.Second
-	DefaultWriteTimeout   = 5 * time.Second
+	// DefaultWriteTimeout limits how long the bridge waits while sending print data.
+	DefaultWriteTimeout = 5 * time.Second
 )
 
+// DialContextFunc is the TCP dialing shape used by the server.
+//
+// Tests can provide a fake dialer so HTTP behavior can be exercised without a
+// real network printer.
 type DialContextFunc func(ctx context.Context, network string, address string) (net.Conn, error)
 
+// Options configures an HTTP router instance.
 type Options struct {
 	Config         config.Config
 	Logger         *logging.Logger
@@ -34,18 +43,21 @@ type Options struct {
 	DialContext    DialContextFunc
 }
 
+// PrintJobRequest is the JSON payload accepted by POST /print.
 type PrintJobRequest struct {
 	PrinterHostname string `json:"printerHostname"`
 	PrinterPort     int    `json:"printerPort"`
 	Text            string `json:"text"`
 }
 
+// Status describes the local listener state.
 type Status struct {
 	Running bool
 	Address string
 	Error   string
 }
 
+// Server owns the localhost HTTP listener and its lifecycle.
 type Server struct {
 	mu         sync.Mutex
 	cfg        config.Config
@@ -55,10 +67,12 @@ type Server struct {
 	lastErr    error
 }
 
+// New creates a server that can be started with Start.
 func New(cfg config.Config, logger *logging.Logger) *Server {
 	return &Server{cfg: cfg, logger: logger}
 }
 
+// NewRouter builds the Gin router for the local printer bridge API.
 func NewRouter(opts Options) *gin.Engine {
 	opts = normalizeOptions(opts)
 
@@ -86,7 +100,7 @@ func corsConfig(allowedOrigins []string) cors.Config {
 		AllowHeaders: []string{"Origin", "Content-Type"},
 	}
 	if len(allowedOrigins) == 0 {
-		cfg.AllowOriginFunc = func(origin string) bool {
+		cfg.AllowOriginFunc = func(_ string) bool {
 			return false
 		}
 		return cfg
@@ -96,6 +110,7 @@ func corsConfig(allowedOrigins []string) cors.Config {
 	return cfg
 }
 
+// Start binds the HTTP listener to localhost and serves requests in a goroutine.
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -141,6 +156,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
+// Stop gracefully shuts down the HTTP listener.
 func (s *Server) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	srv := s.httpServer
@@ -157,6 +173,7 @@ func (s *Server) Stop(ctx context.Context) error {
 	return srv.Shutdown(ctx)
 }
 
+// Restart replaces the server configuration and starts a fresh listener.
 func (s *Server) Restart(cfg config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -172,6 +189,7 @@ func (s *Server) Restart(cfg config.Config) error {
 	return s.Start()
 }
 
+// Status reports whether the listener is running and where it should be found.
 func (s *Server) Status() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -284,7 +302,9 @@ func handlePrint(c *gin.Context, opts Options) {
 		c.JSON(http.StatusBadGateway, gin.H{"message": fmt.Sprintf("error connecting to printer: %v", err)})
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	if err := conn.SetWriteDeadline(time.Now().Add(opts.WriteTimeout)); err != nil {
 		record(opts, "/print", target, "error", fmt.Sprintf("error setting write deadline: %v", err))

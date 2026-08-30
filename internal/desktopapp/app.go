@@ -1,3 +1,4 @@
+// Package desktopapp wires the Fyne UI, tray menu, config, logging, and server.
 package desktopapp
 
 import (
@@ -40,8 +41,9 @@ type application struct {
 	stopUpdates  chan struct{}
 }
 
+// Run starts the desktop app, local HTTP listener, tray integration, and UI loop.
 func Run() error {
-	cfgPath, err := config.ConfigPath()
+	cfgPath, err := config.DefaultConfigPath()
 	if err != nil {
 		return err
 	}

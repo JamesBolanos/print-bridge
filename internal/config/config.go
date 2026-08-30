@@ -1,3 +1,4 @@
+// Package config loads, validates, and saves printer-bridge settings.
 package config
 
 import (
@@ -11,17 +12,25 @@ import (
 )
 
 const (
-	AppID          = "com.jbolanosdiaz.printerbridge"
-	AppName        = "printer-bridge"
+	// AppID is the stable desktop application identifier.
+	AppID = "com.jbolanosdiaz.printerbridge"
+	// AppName is the internal application name used in packaging and paths.
+	AppName = "printer-bridge"
+	// AppDisplayName is the user-facing application name.
 	AppDisplayName = "printer-bridge"
+	// AppDataDirName is the folder created under the user's config directory.
 	AppDataDirName = "PrinterBridge"
 
-	DefaultHTTPPort    = 8080
+	// DefaultHTTPPort is the localhost port used by the bridge on first run.
+	DefaultHTTPPort = 8080
+	// DefaultPrinterPort is the common raw TCP printing port.
 	DefaultPrinterPort = 9100
 )
 
+// DefaultAllowedOrigins is intentionally empty so new installs deny browser CORS requests.
 var DefaultAllowedOrigins = []string{}
 
+// Config contains the persisted printer bridge settings.
 type Config struct {
 	HTTPPort              int      `json:"httpPort"`
 	DefaultPrinterPort    int      `json:"defaultPrinterPort"`
@@ -29,12 +38,14 @@ type Config struct {
 	AllowedOrigins        []string `json:"allowedOrigins"`
 }
 
+// LoadResult describes whether loading config required creating or restoring defaults.
 type LoadResult struct {
 	Created      bool
 	UsedDefaults bool
 	Warning      string
 }
 
+// Default returns a fresh copy of the default configuration.
 func Default() Config {
 	origins := make([]string, len(DefaultAllowedOrigins))
 	copy(origins, DefaultAllowedOrigins)
@@ -47,6 +58,7 @@ func Default() Config {
 	}
 }
 
+// AppDataDir returns the platform-appropriate directory for app data.
 func AppDataDir() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
@@ -55,7 +67,8 @@ func AppDataDir() (string, error) {
 	return filepath.Join(configDir, AppDataDirName), nil
 }
 
-func ConfigPath() (string, error) {
+// DefaultConfigPath returns the default config.json path.
+func DefaultConfigPath() (string, error) {
 	dir, err := AppDataDir()
 	if err != nil {
 		return "", err
@@ -63,6 +76,7 @@ func ConfigPath() (string, error) {
 	return filepath.Join(dir, "config.json"), nil
 }
 
+// LogPath returns the default rotating log file path.
 func LogPath() (string, error) {
 	dir, err := AppDataDir()
 	if err != nil {
@@ -71,10 +85,14 @@ func LogPath() (string, error) {
 	return filepath.Join(dir, "printer-bridge.log"), nil
 }
 
+// LoadOrCreate reads config from path or creates a default config when missing.
+//
+// Malformed or invalid config is replaced with defaults so the desktop app can
+// still start and show the user a recoverable warning.
 func LoadOrCreate(path string) (Config, LoadResult, error) {
 	if path == "" {
 		var err error
-		path, err = ConfigPath()
+		path, err = DefaultConfigPath()
 		if err != nil {
 			return Config{}, LoadResult{}, err
 		}
@@ -119,6 +137,7 @@ func LoadOrCreate(path string) (Config, LoadResult, error) {
 	return normalized, LoadResult{}, nil
 }
 
+// Save validates and atomically writes config to path.
 func Save(path string, cfg Config) error {
 	normalized, err := Normalize(cfg)
 	if err != nil {
@@ -126,7 +145,7 @@ func Save(path string, cfg Config) error {
 	}
 
 	if path == "" {
-		path, err = ConfigPath()
+		path, err = DefaultConfigPath()
 		if err != nil {
 			return err
 		}
@@ -148,10 +167,12 @@ func Save(path string, cfg Config) error {
 		return fmt.Errorf("create temp config: %w", err)
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() {
+		_ = os.Remove(tmpName)
+	}()
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("write temp config: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
@@ -164,6 +185,7 @@ func Save(path string, cfg Config) error {
 	return nil
 }
 
+// Normalize validates config values and applies whitespace cleanup.
 func Normalize(cfg Config) (Config, error) {
 	if cfg.HTTPPort < 1024 || cfg.HTTPPort > 65535 {
 		return Config{}, fmt.Errorf("httpPort must be between 1024 and 65535")
@@ -190,6 +212,7 @@ func Normalize(cfg Config) (Config, error) {
 	return cfg, nil
 }
 
+// ValidateOrigin ensures a CORS origin is only scheme, host, and optional port.
 func ValidateOrigin(origin string) error {
 	parsed, err := url.Parse(origin)
 	if err != nil {
