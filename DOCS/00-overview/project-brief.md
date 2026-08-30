@@ -2,7 +2,7 @@
 
 ## Problem
 
-Web applications that need to print to thermal/label printers (barcode labels, shipping labels, receipts) cannot do so directly — browsers don't expose raw printer access, and OS print dialogs don't support the raw printer languages (ZPL, EPL, CPCL) these devices use. Zebra Browser Print has historically filled this gap by running a local background agent that browser JavaScript can call. That tool is approaching end of support, leaving any web app built against it without a supported path forward.
+Web applications that need to print to thermal/label printers (barcode labels, shipping labels, receipts) cannot do so directly — browsers don't expose raw printer access, and OS print dialogs don't support the raw printer languages (ZPL, EPL, CPCL) these devices use. printer-bridge fills this gap by running a local desktop bridge that browser JavaScript can call.
 
 ## Goal
 
@@ -12,7 +12,7 @@ This is released as a free showcase project — not a commercial product, not a 
 
 ## Non-affiliation
 
-printer-bridge is an independent, unofficial project. It is **not affiliated with, endorsed by, or connected to Zebra Technologies** or any printer manufacturer. This must be stated in the application UI, the repository, and installation instructions. See `09-legal/disclaimer.md` for the exact text to use.
+printer-bridge is an independent, unofficial project. It is **not affiliated with, endorsed by, or connected to any printer manufacturer**. This must be stated in the application UI, the repository, and installation instructions. See `09-legal/disclaimer.md` for the exact text to use.
 
 ## What v1 is
 
@@ -20,7 +20,7 @@ printer-bridge is an independent, unofficial project. It is **not affiliated wit
 - Minimizes to the system tray/menu bar while running; fully quits when the user quits it.
 - Settings UI to configure: local HTTP port, target printer port, default printer address.
 - Local HTTP API: `POST /print` (raw passthrough), `GET /ping` (liveness), `GET /status` (printer reachability check).
-- CORS-based access control, matching the trust model used by Zebra Browser Print.
+- CORS-based browser access control, matching the common trust model used by local desktop bridge tools.
 - Socket-level write/read timeout so an unreachable printer fails fast instead of hanging.
 - Local rotating log file, viewable from within the app.
 - Unsigned installers for both platforms (`.msi` via WiX Toolset on Windows, `.dmg` on macOS), with documented user-facing workarounds for the resulting OS security warnings.
@@ -42,7 +42,7 @@ These exclusions are deliberate scope cuts, not gaps — see `03-architecture/de
 
 ## Success criteria for v1
 
-- A web page can successfully print a ZPL label to a network Zebra (or compatible) printer via the local API on both macOS and Windows.
+- A web page can successfully print a raw printer-language label to a compatible network printer via the local API on both macOS and Windows.
 - An unreachable printer produces a clear error within a few seconds, not a hang.
 - A non-technical user can install and run the app on an unsigned macOS/Windows build by following the documented workaround steps.
-- The project can be shown publicly (GitHub, portfolio) as a working, free, unaffiliated alternative to Zebra Browser Print for this specific use case.
+- The project can be shown publicly (GitHub, portfolio) as a working, free, vendor-neutral local bridge for this specific use case.

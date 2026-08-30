@@ -34,7 +34,7 @@ The `DOCS/` folder defines the product scope, API contract, architecture, securi
 
 ## What v1 Is Not
 
-- Not affiliated with, endorsed by, sponsored by, or connected to Zebra Technologies or any printer manufacturer.
+- Not affiliated with, endorsed by, sponsored by, or connected to any printer manufacturer.
 - Not an official replacement for any vendor product.
 - Not a background service that starts automatically on login.
 - Not code-signed or notarized in v1.
@@ -62,7 +62,7 @@ Run the app:
 go run .
 ```
 
-The app opens a desktop window, starts the local listener on `127.0.0.1:8080` by default, and keeps running from the tray/menu bar when the main window is hidden.
+The app opens a desktop window, starts the local listener on `127.0.0.1:8080` by default, and keeps running from the tray/menu bar when the main window is hidden. The main window shows the app logo, listener address, default printer address/port, and allowed origins; the **Details** view shows config/log paths, endpoints, timeout values, and other runtime information.
 
 Build a local binary:
 
@@ -157,7 +157,7 @@ Remaining validation before public release should focus on real Windows MSI exec
 
 ## Non-Affiliation
 
-`printer-bridge` is an independent, open project created to provide a free bridge for browser-to-printer communication. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with Zebra Technologies Corporation, Datamax, SATO, or any other printer manufacturer. Product names and marks belong to their respective owners and are referenced only for descriptive compatibility context.
+`printer-bridge` is an independent, open project created to provide a free bridge for browser-to-printer communication. It is not affiliated with, endorsed by, sponsored by, or in any way officially connected with any printer manufacturer. Product names and marks belong to their respective owners and are referenced only for descriptive compatibility context.
 
 ## License
 

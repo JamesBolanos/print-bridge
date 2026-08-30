@@ -29,7 +29,7 @@ These are hard boundaries for v1. Unlike requirements (which describe what to bu
 |---|---|
 | Auto-start on login (LaunchAgent / Windows Startup entry) | Adds install/uninstall complexity and, on macOS, triggers explicit "Background Items" user notifications that read as suspicious for an unfamiliar free tool. Manual launch avoids this entirely and matches the "run when needed" usage pattern. |
 | Code signing / notarization | Budget constraint above. Manual-launch-only design reduces the downside of being unsigned, since the app isn't silently running in the background. |
-| Token/API-key authentication | Matches Zebra Browser Print's own trust model (CORS-only). Adding auth would require the caller's web app to manage and transmit a secret client-side, which doesn't meaningfully improve security for a same-machine, localhost-only tool and adds integration friction that works against BR-5 (low integration friction). |
+| Token/API-key authentication | Matches a common localhost bridge trust model (CORS-only for browser callers). Adding auth would require the caller's web app to manage and transmit a secret client-side, which doesn't meaningfully improve security for a same-machine, localhost-only tool and adds integration friction that works against BR-5 (low integration friction). |
 | Format conversion (PDF/image → ZPL) | Out of scope — this is a passthrough bridge, not a rendering engine. Significant scope/complexity increase for a free tool. |
 
 ## What is NOT constrained

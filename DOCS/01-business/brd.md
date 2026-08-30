@@ -4,11 +4,11 @@ Read `00-overview/project-brief.md` first. This document expands the brief into 
 
 ## 1. Background
 
-Zebra Browser Print is a widely used local agent that lets browser-based web apps print to thermal/label printers by bypassing the OS print dialog. It is approaching end of support. Businesses and developers with web apps built against it need a replacement path. printer-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
+Browser-based web apps often need to print to thermal/label printers by bypassing the OS print dialog, but browsers do not expose raw printer access directly. printer-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
 
 ## 2. Business goal
 
-Ship a free, working, publicly showcasable local print agent for macOS and Windows that demonstrates a credible, unaffiliated alternative to Zebra Browser Print for the core use case: a web app sending raw print data to a network printer.
+Ship a free, working, publicly showcasable local print agent for macOS and Windows that demonstrates a credible, vendor-neutral bridge for the core use case: a web app sending raw print data to a network printer.
 
 This is a portfolio/showcase deliverable, not a funded commercial product. Scope, budget, and support commitments should reflect that throughout.
 
@@ -28,13 +28,13 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 **BR-3 — No cost to the maintainer beyond hosting/distribution.** v1 must not require paid code-signing certificates or notarization. See `01-business/constraints.md`.
 
-**BR-4 — Generic printer support.** The bridge must not be hardcoded to Zebra devices. Any printer accepting raw data over a TCP port (Zebra/ZPL, Datamax, SATO, etc.) must be supported, since the target host/port is supplied per request.
+**BR-4 — Generic printer support.** The bridge must not be hardcoded to a specific printer manufacturer. Any printer accepting raw data over a TCP port must be supported, since the target host/port is supplied per request.
 
 **BR-5 — Low integration friction.** A web developer must be able to start sending print jobs with a small number of lines of client-side code (a `fetch()`/HTTP call), without installing an SDK or registering the app.
 
 **BR-6 — Predictable failure behavior.** If a printer is unreachable or a print job fails, the caller must receive a clear error response within a few seconds — not an indefinite hang. This is a business requirement, not just a technical one: integrators building user-facing print flows need to show their own users a timely error.
 
-**BR-7 — Transparent non-affiliation.** Because the project is explicitly positioned as an alternative to a Zebra product, it must be unambiguous — in the app, the repository, and install docs — that printer-bridge is independent and not affiliated with, endorsed by, or supported by Zebra Technologies or any printer manufacturer.
+**BR-7 — Transparent non-affiliation.** It must be unambiguous — in the app, the repository, and install docs — that printer-bridge is independent and not affiliated with, endorsed by, or supported by any printer manufacturer.
 
 **BR-8 — Low support burden.** Given this is maintained by a single person alongside other work, v1 must favor features that reduce support requests (clear errors, visible logs, install-workaround docs) over features that expand scope (multi-printer profiles, format conversion, auto-update).
 
@@ -61,6 +61,6 @@ Items in this list may become v2 backlog candidates — see `08-backlog/epics.md
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Unsigned installer scares away non-technical users | Lower adoption of the showcase | Clear, screenshot-based install docs; frame it honestly as a free/open tool |
-| CORS-only security model is misunderstood as "insecure" by a technical reviewer | Reputational, for a portfolio piece | Document the security model and its rationale explicitly (`03-architecture/security-model.md`), matching how Browser Print itself works |
+| CORS-only security model is misunderstood as "insecure" by a technical reviewer | Reputational, for a portfolio piece | Document the security model and its rationale explicitly (`03-architecture/security-model.md`) |
 | Scope creep during build (agent or owner adding "obvious" features) | Delays v1, burns solo-maintainer time | `03-architecture/decisions.md` explicitly logs and blocks reintroducing cut features |
-| Trademark/branding confusion with Zebra | Legal/reputational | Explicit non-affiliation disclaimer everywhere the product is named or shown (`09-legal/disclaimer.md`) |
+| Trademark/branding confusion with printer manufacturers | Legal/reputational | Explicit non-affiliation disclaimer everywhere the product is named or shown (`09-legal/disclaimer.md`) |

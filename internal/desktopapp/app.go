@@ -12,6 +12,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	fyneapp "fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
@@ -25,7 +26,7 @@ import (
 	"printer-bridge/internal/server"
 )
 
-const disclaimer = "printer-bridge is an independent project, not affiliated with Zebra Technologies or any printer manufacturer."
+const disclaimer = "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer."
 
 type application struct {
 	app          fyne.App
@@ -37,6 +38,7 @@ type application struct {
 	activity     *activity.Store
 	statusIcon   *widget.Icon
 	statusLabel  *widget.Label
+	infoLabel    *widget.Label
 	messageLabel *widget.Label
 	activityList *widget.List
 	closeNotice  bool
@@ -105,9 +107,15 @@ func Run() error {
 func (a *application) mainContent() fyne.CanvasObject {
 	title := widget.NewLabelWithStyle(config.AppDisplayName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	subtitle := widget.NewLabel("Local browser-to-printer bridge")
+	logo := canvas.NewImageFromResource(assets.AppIcon())
+	logo.FillMode = canvas.ImageFillContain
+	logoHolder := container.NewGridWrap(fyne.NewSize(96, 96), logo)
+	heading := container.NewBorder(nil, nil, logoHolder, nil, container.NewVBox(title, subtitle))
 
 	a.statusIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
 	a.statusLabel = widget.NewLabel("Starting listener")
+	a.infoLabel = widget.NewLabel("")
+	a.infoLabel.Wrapping = fyne.TextWrapWord
 	a.messageLabel = widget.NewLabel("")
 	a.messageLabel.Wrapping = fyne.TextWrapWord
 
@@ -117,9 +125,10 @@ func (a *application) mainContent() fyne.CanvasObject {
 	disclaimerLabel.Wrapping = fyne.TextWrapWord
 
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
+	detailsButton := widget.NewButtonWithIcon("Details", theme.InfoIcon(), a.showDetails)
 	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 	quitButton := widget.NewButtonWithIcon("Quit", theme.CancelIcon(), a.quit)
-	actions := container.NewHBox(settingsButton, logsButton, layout.NewSpacer(), quitButton)
+	actions := container.NewHBox(settingsButton, detailsButton, logsButton, layout.NewSpacer(), quitButton)
 
 	a.activityList = widget.NewList(
 		func() int {
@@ -142,7 +151,7 @@ func (a *application) mainContent() fyne.CanvasObject {
 	)
 
 	content := container.NewBorder(
-		container.NewVBox(title, subtitle, statusRow, a.messageLabel, disclaimerLabel, actions, widget.NewSeparator(), widget.NewLabel("Recent activity")),
+		container.NewVBox(heading, statusRow, a.infoLabel, a.messageLabel, disclaimerLabel, actions, widget.NewSeparator(), widget.NewLabel("Recent activity")),
 		nil,
 		nil,
 		nil,
@@ -183,14 +192,18 @@ func (a *application) updateTrayMenu() {
 	status := a.server.Status()
 	statusText := "Stopped"
 	if status.Running {
-		statusText = "Listening on " + status.Address
+		statusText = "HTTP: " + status.Address
 	}
 
 	desktopApp.SetSystemTrayMenu(fyne.NewMenu(config.AppDisplayName,
 		fyne.NewMenuItem("Open printer-bridge", func() {
 			a.window.Show()
 		}),
+		fyne.NewMenuItem("Details", a.showDetails),
+		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem(statusText, nil),
+		fyne.NewMenuItem("Printer port: "+strconv.Itoa(a.cfg.DefaultPrinterPort), nil),
+		fyne.NewMenuItem("Allowed origins: "+strconv.Itoa(len(a.cfg.AllowedOrigins)), nil),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("Quit", a.quit),
 	))
@@ -211,7 +224,28 @@ func (a *application) updateStatus() {
 	}
 	a.statusIcon.Refresh()
 	a.statusLabel.Refresh()
+	a.updateInfo()
 	a.updateTrayMenu()
+}
+
+func (a *application) updateInfo() {
+	if a.infoLabel == nil {
+		return
+	}
+	status := a.server.Status()
+	listener := status.Address
+	if listener == "" {
+		listener = "127.0.0.1:" + strconv.Itoa(a.cfg.HTTPPort)
+	}
+
+	a.infoLabel.SetText(fmt.Sprintf(
+		"Local listener: %s\nDefault printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
+		listener,
+		a.cfg.DefaultPrinterPort,
+		displayValue(a.cfg.DefaultPrinterAddress, "Not set"),
+		displayOrigins(a.cfg.AllowedOrigins),
+	))
+	a.infoLabel.Refresh()
 }
 
 func (a *application) setMessage(message string) {
@@ -291,6 +325,77 @@ func (a *application) showSettings() {
 	settingsWindow.Show()
 }
 
+func (a *application) showDetails() {
+	detailsWindow := a.app.NewWindow("Details")
+	detailsWindow.Resize(fyne.NewSize(760, 560))
+
+	detailsText := widget.NewMultiLineEntry()
+	detailsText.Disable()
+	detailsText.SetMinRowsVisible(20)
+	detailsText.SetText(a.detailsText())
+
+	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
+		detailsText.SetText(a.detailsText())
+	})
+	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
+	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
+
+	detailsWindow.SetContent(container.NewPadded(container.NewBorder(
+		container.NewHBox(refreshButton, settingsButton, logsButton, layout.NewSpacer()),
+		nil,
+		nil,
+		nil,
+		detailsText,
+	)))
+	detailsWindow.Show()
+}
+
+func (a *application) detailsText() string {
+	status := a.server.Status()
+	running := "no"
+	if status.Running {
+		running = "yes"
+	}
+	statusError := displayValue(status.Error, "None")
+	defaultPrinterAddress := displayValue(a.cfg.DefaultPrinterAddress, "Not set")
+
+	return strings.Join([]string{
+		"Application",
+		"  Name: " + config.AppDisplayName,
+		"  App ID: " + config.AppID,
+		"",
+		"Listener",
+		"  Running: " + running,
+		"  Address: " + status.Address,
+		"  HTTP port: " + strconv.Itoa(a.cfg.HTTPPort),
+		"  Last listener error: " + statusError,
+		"",
+		"Printer Defaults",
+		"  Default printer address: " + defaultPrinterAddress,
+		"  Default printer port: " + strconv.Itoa(a.cfg.DefaultPrinterPort),
+		"",
+		"Allowed Origins",
+		indentLines(a.cfg.AllowedOrigins, "  ", "  None configured"),
+		"",
+		"Files",
+		"  Config file: " + a.cfgPath,
+		"  Log file: " + a.logger.Path(),
+		"",
+		"API Endpoints",
+		"  GET /ping",
+		"  GET /status?host=<printer_host>&port=<printer_port>",
+		"  POST /print",
+		"",
+		"Timeouts",
+		"  TCP connect timeout: " + server.DefaultConnectTimeout.String(),
+		"  TCP write timeout: " + server.DefaultWriteTimeout.String(),
+		"",
+		"Logging",
+		"  Max log file size: 5 MB",
+		"  Retained rotated log files: 3",
+	}, "\n")
+}
+
 func settingsConfig(httpPortText string, printerPortText string, printerAddress string, originsText string) (config.Config, error) {
 	httpPort, err := strconv.Atoi(strings.TrimSpace(httpPortText))
 	if err != nil {
@@ -324,6 +429,32 @@ func splitOrigins(text string) []string {
 		}
 	}
 	return origins
+}
+
+func displayValue(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func displayOrigins(origins []string) string {
+	if len(origins) == 0 {
+		return "None configured"
+	}
+	return strings.Join(origins, ", ")
+}
+
+func indentLines(lines []string, prefix string, empty string) string {
+	if len(lines) == 0 {
+		return empty
+	}
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		out = append(out, prefix+line)
+	}
+	return strings.Join(out, "\n")
 }
 
 func (a *application) showLogs() {

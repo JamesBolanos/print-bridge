@@ -25,7 +25,7 @@ Each entry records a decision, the alternatives considered, and why the alternat
 **Alternatives considered:**
 - Shared token/API key that the calling web app includes in each request.
 
-**Why rejected:** See `03-architecture/security-model.md` for full rationale. Summary: a client-side token is visible in browser dev tools and doesn't meaningfully raise the security bar for a localhost-only tool, while adding integration friction that works against BR-5 (low integration friction). Matches Browser Print's own established trust model.
+**Why rejected:** See `03-architecture/security-model.md` for full rationale. Summary: a client-side token is visible in browser dev tools and doesn't meaningfully raise the security bar for a localhost-only tool, while adding integration friction that works against BR-5 (low integration friction). This matches a common trust model for local browser-to-desktop bridge tools.
 
 **Do not reintroduce without:** a specific, articulated threat this addresses that CORS doesn't already cover — not "more auth is generally better."
 
@@ -65,6 +65,6 @@ Each entry records a decision, the alternatives considered, and why the alternat
 **Alternatives considered:**
 - Accept PDF/image payloads and convert to ZPL/raster on the bridge side.
 
-**Why rejected:** Significant scope and complexity increase (rendering engine, per-printer-language conversion logic) for a free tool with one maintainer. Matches how Browser Print itself is primarily used — the calling web app is expected to already generate ZPL/EPL, which is the standard pattern for label-printing integrations.
+**Why rejected:** Significant scope and complexity increase (rendering engine, per-printer-language conversion logic) for a free tool with one maintainer. The calling web app is expected to already generate raw printer-language data, which is the standard pattern for label-printing integrations.
 
 **Do not reintroduce without:** clear evidence this is blocking real adoption, and likely as a v2 scoped addition, not a v1 amendment.

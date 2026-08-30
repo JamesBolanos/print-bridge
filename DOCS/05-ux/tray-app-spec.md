@@ -23,9 +23,11 @@ stateDiagram-v2
 The default view when the app is open.
 
 **Contents:**
-- Status indicator: listener running (green) with the current HTTP port shown, e.g. "Listening on localhost:8080"
-- Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with Zebra Technologies or any printer manufacturer." (full text in `09-legal/disclaimer.md`)
-- Buttons/links: **Settings**, **View Logs**, **Quit**
+- App logo, using the project icon asset.
+- Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
+- Runtime details: listener address, default printer address/port, and allowed origins.
+- Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
+- Buttons/links: **Settings**, **Details**, **View Logs**, **Quit**
 - Recent activity: a short live-updating list of the last few requests (timestamp, endpoint, outcome) — a lightweight in-window view of the same data written to the log file. Not a full log viewer; see "View Logs" below for that.
 
 **Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("printer-bridge is still running in the tray") so the user isn't confused about whether the app exited.
@@ -47,7 +49,19 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 - Show a brief confirmation (e.g. "Settings saved — listener restarted on port 8080") so the user has positive feedback that the restart happened.
 - **Cancel** discards changes and returns to the main window without touching the running listener.
 
-### 3. Logs viewer
+### 3. Details
+
+Opened from the main window. Displays all user-relevant runtime/configuration information in a read-only view:
+
+- App name and app ID.
+- Listener running/stopped state, listener address, HTTP port, and last listener error.
+- Default printer address and default printer port.
+- Allowed CORS origins.
+- Config file path and log file path.
+- API endpoints.
+- TCP timeout values and log rotation policy.
+
+### 4. Logs viewer
 
 Opened from the main window. Displays the current rotating log file's contents (see `03-architecture/architecture-overview.md` for rotation policy).
 
@@ -55,7 +69,7 @@ Opened from the main window. Displays the current rotating log file's contents (
 - A "Reveal in Finder/Explorer" button (platform-appropriate) so a technical user or the maintainer, if asked for help, can grab the raw file.
 - No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
 
-### 4. Tray/menu bar icon
+### 5. Tray/menu bar icon
 
 Persistent while the app is running (whether the main window is open or minimized).
 
@@ -63,7 +77,10 @@ Persistent while the app is running (whether the main window is open or minimize
 
 **Right-click menu (or platform-equivalent):**
 - Open printer-bridge (same as click)
-- Status: shows a non-interactive line, e.g. "Listening on port 8080" or "Stopped" if the listener failed to start
+- Details
+- Status: shows a non-interactive line, e.g. "HTTP: 127.0.0.1:8080" or "Stopped" if the listener failed to start
+- Default printer port
+- Allowed origin count
 - Quit
 
 ## States to handle explicitly

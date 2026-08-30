@@ -4,7 +4,7 @@ This folder is the complete specification set for **printer-bridge**, a free, st
 
 ## What this project is
 
-A local desktop application that lets any web app send print jobs to a network-connected thermal/label printer (Zebra, Datamax, SATO, etc.) without going through the OS print dialog. It is a spiritual successor to Zebra Browser Print, which is approaching end of support. printer-bridge is **not affiliated with or endorsed by Zebra Technologies** — see `09-legal/disclaimer.md`.
+A local desktop application that lets any web app send print jobs to a network-connected thermal/label printer without going through the OS print dialog. printer-bridge is vendor-neutral and **not affiliated with or endorsed by any printer manufacturer** — see `09-legal/disclaimer.md`.
 
 The project started from a working Go backend prototype (HTTP → TCP passthrough to port 9100). This playbook defines the target v1: that backend evolved into a full desktop app with a GUI, wrapped for distribution on both platforms.
 
