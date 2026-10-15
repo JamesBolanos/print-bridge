@@ -1,4 +1,4 @@
-# Config Schema — printer-bridge
+# Config Schema — print-bridge
 
 Read `05-ux/tray-app-spec.md` alongside this — that document defines how these fields are edited; this document defines what they are, where they live, and how they're validated.
 
@@ -8,8 +8,8 @@ A local JSON file, platform-appropriate path:
 
 | Platform | Path |
 |---|---|
-| macOS | `~/Library/Application Support/PrinterBridge/config.json` |
-| Windows | `%APPDATA%\PrinterBridge\config.json` |
+| macOS | `~/Library/Application Support/PrintBridge/config.json` |
+| Windows | `%APPDATA%\PrintBridge\config.json` |
 
 Rationale: a plain file, not a database, per the "few moving parts" architectural value in `03-architecture/architecture-overview.md`. JSON chosen over YAML/TOML since Go's standard library handles it with no extra dependency, and there's no need for human hand-editing to be especially pleasant — the Settings UI is the intended edit path.
 
@@ -49,9 +49,11 @@ The user adds the origin(s) they actually need via Settings. Examples include lo
 
 ## Migration / versioning
 
-Not required for v1 — this new repo creates `config.json` on first launch. If the schema changes in a future version, add a `configVersion` field at that time — do not add one now for a version that doesn't exist yet.
+Not required for the current beta — the app creates `config.json` on first
+launch. If the schema changes in a future version, add a `configVersion` field
+at that time.
 
 ## What is NOT stored in config
 
 - Print job history/logs — these live in the rotating log file (`03-architecture/architecture-overview.md`), not in `config.json`.
-- Window position/size or other pure UI state — not required for v1; the app can open at a sensible default size each launch.
+- Window position/size or other pure UI state — not required for the current beta; the app can open at a sensible default size each launch.

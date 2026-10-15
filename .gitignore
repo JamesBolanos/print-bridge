@@ -16,7 +16,7 @@ go.work
 go.work.sum
 
 # Build artifacts
-/printer-bridge
+/print-bridge
 /bin/
 /dist/
 

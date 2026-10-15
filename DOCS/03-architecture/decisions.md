@@ -1,12 +1,15 @@
-# Architecture Decision Log — printer-bridge
+# Architecture Decision Log — print-bridge
 
-Each entry records a decision, the alternatives considered, and why the alternative was rejected for v1. **Read this before proposing any change to the areas covered here** — these were deliberate scope cuts made with the project owner, not gaps to fill in.
+Each entry records a decision, the alternatives considered, and why the
+alternative was rejected for the current beta. **Read this before proposing any
+change to the areas covered here** — these were deliberate scope cuts, not gaps
+to fill in.
 
 ---
 
 ## ADR-001: Manual launch, not auto-start on login
 
-**Decision:** printer-bridge does not register as a startup item (no macOS LaunchAgent, no Windows Startup registry entry). The user opens it manually when needed.
+**Decision:** print-bridge does not register as a startup item (no macOS LaunchAgent, no Windows Startup registry entry). The user opens it manually when needed.
 
 **Alternatives considered:**
 - Menu bar/tray app with auto-start — originally the default assumption, since "always available" is the natural expectation for a tray app.
@@ -31,17 +34,17 @@ Each entry records a decision, the alternatives considered, and why the alternat
 
 ---
 
-## ADR-003: Unsigned installers for v1, no paid certificates
+## ADR-003: Free ad-hoc signing only for the current beta
 
-**Decision:** No macOS notarization (Apple Developer Program) and no Windows code-signing certificate for v1. Both installers ship unsigned, with documented user-facing workarounds for the resulting OS warnings.
+**Decision:** The current beta does not require macOS notarization (Apple Developer Program) or a Windows code-signing certificate. The macOS release workflow applies free ad-hoc signing to make the app bundle structurally valid, then documents the Gatekeeper/quarantine workaround for downloaded builds.
 
 **Alternatives considered:**
-- Pay for both certificates upfront as part of v1 build cost.
+- Pay for both certificates upfront as part of the current beta build cost.
 - Pay for one platform only.
 
 **Why rejected:** Explicit budget constraint (`01-business/constraints.md`) — this is a free showcase project with no committed revenue to justify ~$300–500/yr in certificate costs before it's proven to have an audience. Manual-launch-only design (ADR-001) reduces the downside of shipping unsigned, since the app isn't silently running in the background — the OS warning appears once, at a moment the user is actively choosing to open the app.
 
-**Do not reintroduce without:** the project owner deciding to invest in signing, typically once there's evidence of real usage/demand justifying the cost. This is a "when it's worth it" backlog item, not a technical blocker being worked around.
+**Do not require paid signing without:** the project owner deciding to invest in signing, typically once there's evidence of real usage/demand justifying the cost. Keep the free ad-hoc signing and verification step in CI so the app bundle is not structurally invalid.
 
 ---
 
@@ -52,7 +55,7 @@ Each entry records a decision, the alternatives considered, and why the alternat
 **Alternatives considered:**
 - Separate background agent process + separate GUI process communicating over a local socket or IPC.
 
-**Why rejected:** A split-process design is the natural architecture *if* auto-start were in scope (headless agent always running, GUI launched on demand to manage it) — but since auto-start was cut (ADR-001), there's no scenario in v1 where the agent needs to run without the GUI. A single process is simpler to build, install, uninstall, and reason about, consistent with the "few moving parts" architectural value.
+**Why rejected:** A split-process design is the natural architecture *if* auto-start were in scope (headless agent always running, GUI launched on demand to manage it) — but since auto-start was cut (ADR-001), there's no current-beta scenario where the agent needs to run without the GUI. A single process is simpler to build, install, uninstall, and reason about, consistent with the "few moving parts" architectural value.
 
 **Do not reintroduce without:** auto-start (ADR-001) being reinstated first — a process split only earns its complexity if the agent needs to outlive the GUI window.
 
@@ -67,4 +70,4 @@ Each entry records a decision, the alternatives considered, and why the alternat
 
 **Why rejected:** Significant scope and complexity increase (rendering engine, per-printer-language conversion logic) for a free tool with one maintainer. The calling web app is expected to already generate raw printer-language data, which is the standard pattern for label-printing integrations.
 
-**Do not reintroduce without:** clear evidence this is blocking real adoption, and likely as a v2 scoped addition, not a v1 amendment.
+**Do not reintroduce without:** clear evidence this is blocking real adoption, and likely as a future scoped addition, not a current-beta amendment.

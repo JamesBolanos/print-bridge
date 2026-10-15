@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"printer-bridge/internal/activity"
+	"print-bridge/internal/activity"
 )
 
 func TestRecordWritesLogAndActivity(t *testing.T) {
 	store := activity.NewStore(5)
-	path := filepath.Join(t.TempDir(), "printer-bridge.log")
+	path := filepath.Join(t.TempDir(), "print-bridge.log")
 	logger := New(path, 1024, 3, store)
 
 	entry := activity.Entry{
@@ -34,7 +34,7 @@ func TestRecordWritesLogAndActivity(t *testing.T) {
 }
 
 func TestReadLinesNewestFirst(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "printer-bridge.log")
+	path := filepath.Join(t.TempDir(), "print-bridge.log")
 	require.NoError(t, os.WriteFile(path, []byte("old\nnew\n"), 0o644))
 
 	lines, err := New(path, 1024, 3, nil).ReadLinesNewestFirst(0)
@@ -44,7 +44,7 @@ func TestReadLinesNewestFirst(t *testing.T) {
 }
 
 func TestRotation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "printer-bridge.log")
+	path := filepath.Join(t.TempDir(), "print-bridge.log")
 	logger := New(path, 40, 2, nil)
 
 	logger.Record(activity.Entry{Timestamp: time.Now(), Endpoint: "/print", Outcome: "first", Detail: strings.Repeat("a", 50)})

@@ -1,10 +1,10 @@
-# Business Requirements Document — printer-bridge
+# Business Requirements Document — print-bridge
 
 Read `00-overview/project-brief.md` first. This document expands the brief into concrete business-level requirements. It does not define technical implementation — see `03-architecture/` for that.
 
 ## 1. Background
 
-Browser-based web apps often need to print to thermal/label printers by bypassing the OS print dialog, but browsers do not expose raw printer access directly. printer-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
+Browser-based web apps often need to print to thermal/label printers by bypassing the OS print dialog, but browsers do not expose raw printer access directly. print-bridge addresses the underlying capability — local, browser-callable, raw printer access — independent of any one vendor's tooling.
 
 ## 2. Business goal
 
@@ -16,7 +16,7 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 | Stakeholder | Interest |
 |---|---|
-| Project owner (you) | A working, demonstrable v1 that can be shown publicly as evidence of capability; minimal ongoing support burden |
+| Maintainer | A working, demonstrable beta that can be shown publicly as evidence of capability; minimal ongoing support burden |
 | Web developers / integrators | A stable local HTTP API they can call from their own app to print labels, with clear docs and predictable error behavior |
 | End users (non-technical) | Able to install and run the app with minimal friction, despite it being unsigned |
 
@@ -26,7 +26,7 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 **BR-2 — No cost to the user.** The app must be free to download and use. No license key, account, or payment step.
 
-**BR-3 — No cost to the maintainer beyond hosting/distribution.** v1 must not require paid code-signing certificates or notarization. See `01-business/constraints.md`.
+**BR-3 — No cost to the maintainer beyond hosting/distribution.** The current release scope must not require paid code-signing certificates or notarization. See `01-business/constraints.md`.
 
 **BR-4 — Generic printer support.** The bridge must not be hardcoded to a specific printer manufacturer. Any printer accepting raw data over a TCP port must be supported, since the target host/port is supplied per request.
 
@@ -34,11 +34,11 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 **BR-6 — Predictable failure behavior.** If a printer is unreachable or a print job fails, the caller must receive a clear error response within a few seconds — not an indefinite hang. This is a business requirement, not just a technical one: integrators building user-facing print flows need to show their own users a timely error.
 
-**BR-7 — Transparent non-affiliation.** It must be unambiguous — in the app, the repository, and install docs — that printer-bridge is independent and not affiliated with, endorsed by, or supported by any printer manufacturer.
+**BR-7 — Transparent non-affiliation.** It must be unambiguous — in the app, the repository, and install docs — that print-bridge is independent and not affiliated with, endorsed by, or supported by any printer manufacturer.
 
-**BR-8 — Low support burden.** Given this is maintained by a single person alongside other work, v1 must favor features that reduce support requests (clear errors, visible logs, install-workaround docs) over features that expand scope (multi-printer profiles, format conversion, auto-update).
+**BR-8 — Low support burden.** Given this is maintained by a single person alongside other work, the current beta must favor features that reduce support requests (clear errors, visible logs, install-workaround docs) over features that expand scope (multi-printer profiles, format conversion, auto-update).
 
-## 5. Out of scope for v1
+## 5. Out of scope for the current beta
 
 - Commercial licensing, paid tiers, or support SLAs
 - Auto-start on login (see `constraints.md`)
@@ -48,11 +48,11 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 - Saved multi-printer profiles or an address book
 - Auto-update mechanism
 
-Items in this list may become v2 backlog candidates — see `08-backlog/epics.md` — but must not be built as part of v1 without an explicit scope change from the project owner.
+Items in this list may become future backlog candidates — see `08-backlog/epics.md` — but must not be built as part of the current beta without an explicit scope change.
 
 ## 6. Assumptions
 
-- Target printers are already on the same local network as the machine running printer-bridge and accept raw data on a TCP port (commonly 9100).
+- Target printers are already on the same local network as the machine running print-bridge and accept raw data on a TCP port (commonly 9100).
 - Integrators are comfortable making a same-machine HTTP call from their web app's JavaScript (i.e., they control the calling web app's origin and can add it to the CORS allow-list).
 - End users are willing to follow a short, documented workaround (a few clicks) to run an unsigned app — this is treated as acceptable friction for a free tool, not a blocker.
 
@@ -62,5 +62,5 @@ Items in this list may become v2 backlog candidates — see `08-backlog/epics.md
 |---|---|---|
 | Unsigned installer scares away non-technical users | Lower adoption of the showcase | Clear, screenshot-based install docs; frame it honestly as a free/open tool |
 | CORS-only security model is misunderstood as "insecure" by a technical reviewer | Reputational, for a portfolio piece | Document the security model and its rationale explicitly (`03-architecture/security-model.md`) |
-| Scope creep during build (agent or owner adding "obvious" features) | Delays v1, burns solo-maintainer time | `03-architecture/decisions.md` explicitly logs and blocks reintroducing cut features |
+| Scope creep during build (adding "obvious" features) | Delays the beta, burns solo-maintainer time | `03-architecture/decisions.md` explicitly logs and blocks reintroducing cut features |
 | Trademark/branding confusion with printer manufacturers | Legal/reputational | Explicit non-affiliation disclaimer everywhere the product is named or shown (`09-legal/disclaimer.md`) |

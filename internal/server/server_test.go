@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"printer-bridge/internal/config"
+	"print-bridge/internal/config"
 )
 
 func TestPing(t *testing.T) {

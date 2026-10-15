@@ -16,9 +16,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"printer-bridge/internal/activity"
-	"printer-bridge/internal/config"
-	"printer-bridge/internal/logging"
+	"print-bridge/internal/activity"
+	"print-bridge/internal/config"
+	"print-bridge/internal/logging"
 )
 
 const (
@@ -72,7 +72,7 @@ func New(cfg config.Config, logger *logging.Logger) *Server {
 	return &Server{cfg: cfg, logger: logger}
 }
 
-// NewRouter builds the Gin router for the local printer bridge API.
+// NewRouter builds the Gin router for the local print bridge API.
 func NewRouter(opts Options) *gin.Engine {
 	opts = normalizeOptions(opts)
 

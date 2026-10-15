@@ -33,10 +33,10 @@ The default view when the app is open.
 - App logo, using the project icon asset.
 - Status indicator: listener running (green) with the current HTTP listener shown, e.g. "Listening on 127.0.0.1:8080"
 - Runtime details: default printer address/port and allowed origins. If no origins are configured, show a clear empty state and point the user to Settings. Do not repeat the listener address here; the status row already owns listener status.
-- Non-affiliation disclaimer, always visible, short form: "printer-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
+- Non-affiliation disclaimer, always visible, short form: "print-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer." (full text in `09-legal/disclaimer.md`)
 - Buttons/links: **Settings**, **Details**, **Help**, **View Logs**, **Quit**
 
-**Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("printer-bridge is still running in the tray") so the user isn't confused about whether the app exited.
+**Close button behavior:** clicking the window's close control **minimizes to tray**, it does not quit. This must be visually signposted — e.g. a tooltip or one-time notice on first close ("print-bridge is still running in the tray") so the user isn't confused about whether the app exited.
 
 ### 2. Settings
 
@@ -88,7 +88,7 @@ Opened from the main window. Displays the current rotating log file's contents a
 
 - Read-only normal-contrast text view, most recent entries first, with a clear label that states the order and that the view updates automatically.
 - No in-window action buttons; updates happen automatically while the window is open.
-- No in-app filtering/search required for v1 — this is a lightweight troubleshooting view, not a log management tool.
+- No in-app filtering/search required for the current beta — this is a lightweight troubleshooting view, not a log management tool.
 
 ### 6. Tray/menu bar icon
 
@@ -97,7 +97,7 @@ Persistent while the app is running (whether the main window is open or minimize
 **Left-click / click:** opens or focuses the main window.
 
 **Right-click menu (or platform-equivalent):**
-- Open printer-bridge (same as click)
+- Open print-bridge (same as click)
 - Details
 - Help
 - Status: shows a non-interactive line, e.g. "HTTP: 127.0.0.1:8080" or "Stopped" if the listener failed to start
@@ -111,9 +111,9 @@ Persistent while the app is running (whether the main window is open or minimize
 |---|---|
 | Listener fails to start (e.g. port already in use) | Main window shows a clear error with the specific reason and a shortcut to Settings to change the port. Tray icon still appears (so the user isn't left with no way to reach the app) but its status line reflects "Stopped." |
 | Settings save triggers restart, restart fails | Show the same error pattern as above, inline in the Settings screen, without discarding the user's entered values (so they don't have to retype). |
-| First launch | No special onboarding flow required for v1. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
+| First launch | No special onboarding flow required for the current beta. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
 
-## Explicitly out of scope for v1
+## Explicitly out of scope for the current beta
 
 - No saved multi-printer profile list — the "default printer address" field is a single convenience value, not an address book (see BRD out-of-scope, BR/ADR references).
 - No in-app update checker/notification.

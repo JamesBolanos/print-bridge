@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Public releases of `printer-bridge` are supported on a best-effort basis.
+Public releases of `print-bridge` are supported on a best-effort basis.
 Pre-release builds may change quickly while the project is still stabilizing.
 
 ## Reporting a Vulnerability
@@ -17,12 +17,12 @@ Helpful reports include:
 - A clear description of the issue
 - Steps to reproduce or proof of concept
 - Operating system and version
-- printer-bridge version or commit
+- print-bridge version or commit
 - Any relevant configuration details, with secrets removed
 
 ## Security Model
 
-`printer-bridge` runs a local HTTP API bound to `127.0.0.1` and forwards raw
+`print-bridge` runs a local HTTP API bound to `127.0.0.1` and forwards raw
 printer-language text to network printers over TCP.
 
 Browser access is controlled through a CORS allow-list. CORS is browser-enforced
