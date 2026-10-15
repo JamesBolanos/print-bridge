@@ -36,6 +36,28 @@ The `DOCS/` folder defines the product scope, API contract, architecture, securi
 - Local rotating logs, viewable from the app.
 - Windows and macOS installers with free macOS ad-hoc signing and clear user-facing installation guidance for unsigned downloads.
 
+## Use Virtual Mode
+
+Virtual Mode lets you exercise an existing print integration without a
+physical printer. In the desktop app, open **Settings**, choose **Virtual**,
+and save. Print jobs sent to the usual `/print` endpoint are captured locally
+for inspection instead of being sent to a printer. The main window and tray
+show which destination is active. Virtual mode applies globally, even when a
+request includes a printer address. Browser-based callers still need their
+website origin added under **Allowed origins** in Settings.
+
+Choose **Open Inspector** in the main window or tray to open the local browser
+dashboard. There you can inspect captured jobs, view their text and bytes,
+copy or download the original payload, and clear the session history. Capture
+and inspection work offline. Jobs are held in bounded memory and are cleared
+when print-bridge quits; Virtual Mode does not physically print or replay jobs.
+
+Optional ZPL previews can be enabled in Settings. They are off by default and
+work only in Virtual Mode. When enabled, label contents are sent over HTTPS to
+the external Labelary service for rendering; preview availability does not
+affect job capture. See [the Virtual Mode API and Inspector details](DOCS/04-api/virtual-mode.md)
+and [configuration options](DOCS/06-config/config-schema.md).
+
 ## What It Does Not Do
 
 - Not affiliated with, endorsed by, sponsored by, or connected to any printer manufacturer.
