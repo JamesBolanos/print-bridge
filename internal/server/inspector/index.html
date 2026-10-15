@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PrintBridge Inspector</title>
+  <link rel="stylesheet" href="/inspector/styles.css">
+  <script src="/inspector/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">PRINTBRIDGE · VIRTUAL MODE</p>
+      <h1>Job inspector</h1>
+    </div>
+    <div class="connection">
+      <span id="connection-dot" class="dot" aria-hidden="true"></span>
+      <span id="connection-status" role="status" aria-live="polite">Connecting…</span>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="history panel" aria-label="Captured print jobs">
+      <div class="panel-heading">
+        <div>
+          <h2>Captured jobs</h2>
+          <p id="job-count" class="muted">Loading history…</p>
+        </div>
+        <button id="clear-button" class="button button-quiet" type="button" disabled>Clear all</button>
+      </div>
+      <p class="session-note">History stays in memory for this app session and is cleared when PrintBridge quits.</p>
+      <ul id="job-list" class="job-list" aria-label="Jobs, newest first"></ul>
+      <p id="empty-state" class="empty-state" hidden>No captured jobs yet. Send a print request while Virtual mode is active to see it here.</p>
+    </aside>
+
+    <section class="detail panel" aria-labelledby="detail-title">
+      <div id="no-selection" class="welcome">
+        <span class="welcome-mark" aria-hidden="true">PB</span>
+        <h2 id="detail-title">Select a job to inspect</h2>
+        <p>Captured text, control characters, and bytes are shown locally. Nothing here is sent to a printer.</p>
+      </div>
+      <div id="job-detail" hidden>
+        <div class="panel-heading detail-heading">
+          <div class="job-title">
+            <p class="eyebrow">CAPTURED JOB</p>
+            <h2 id="selected-id"></h2>
+            <p id="selected-meta" class="muted"></p>
+          </div>
+          <div class="actions">
+            <button id="copy-button" class="button button-secondary" type="button">Copy text</button>
+            <a id="download-link" class="button button-primary" href="#">Download original</a>
+          </div>
+        </div>
+
+        <dl class="status-grid">
+          <div><dt>Capture</dt><dd id="capture-state"></dd></div>
+          <div><dt>Preview</dt><dd id="preview-state"></dd></div>
+          <div class="target-state"><dt>Supplied destination</dt><dd id="selected-target"></dd></div>
+        </dl>
+
+        <div class="inspect-grid">
+          <section class="payload-section">
+            <div class="section-heading">
+              <div>
+                <h3>Payload</h3>
+                <p id="payload-hint" class="muted">Original decoded text</p>
+              </div>
+              <div class="tabs" role="tablist" aria-label="Payload view">
+                <button id="raw-tab" class="tab active" type="button" role="tab" aria-selected="true">Raw text</button>
+                <button id="visible-tab" class="tab" type="button" role="tab" aria-selected="false">Visible</button>
+                <button id="hex-tab" class="tab" type="button" role="tab" aria-selected="false">Hex</button>
+              </div>
+            </div>
+            <pre id="payload-view" class="payload-view" tabindex="0" aria-label="Job payload">Loading payload…</pre>
+            <p id="copy-feedback" class="feedback" role="status" aria-live="polite"></p>
+          </section>
+          <section class="preview-section">
+            <div class="section-heading">
+              <div>
+                <h3>Preview</h3>
+                <p class="muted">Rendering shares complete label contents with external Labelary over HTTPS; it is off by default and controlled by the saved preview.labelaryEnabled setting.</p>
+              </div>
+            </div>
+            <div class="preview-controls">
+              <label for="label-index">Label index</label>
+              <input id="label-index" type="number" min="0" max="99" value="0" inputmode="numeric">
+              <button id="render-button" class="button button-secondary" type="button" disabled>Render / retry</button>
+            </div>
+            <div id="preview-content" class="preview-content">
+              <p id="preview-message" class="muted">No preview is available. Capture and inspection work offline.</p>
+              <img id="preview-image" alt="Rendered label preview" hidden>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span>Local session history · Refreshes automatically</span>
+    <span id="last-updated"></span>
+  </footer>
+</body>
+</html>

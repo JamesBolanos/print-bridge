@@ -9,6 +9,8 @@
 ## What ships in the `.app` bundle
 
 - The Fyne-built binary.
+- Inspector HTML, JavaScript, and CSS are embedded in the binary; no separate
+  frontend server or downloaded dashboard assets are required.
 - A standard `Info.plist` with app name, bundle identifier (e.g. `com.<yourname>.printbridge` — pick a real reverse-DNS identifier, this matters even unsigned, since it's used for app data directory conventions and any future signing), and version.
 - App icon.
 

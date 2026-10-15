@@ -9,14 +9,22 @@ flowchart LR
     subgraph "print-bridge (single binary)"
         UI[Fyne GUI\nSettings window + tray icon]
         Core[HTTP Server\nGin router]
+        Store[Bounded session capture store]
+        Inspector[Bundled browser inspector]
+        Preview[Optional preview workers]
         Log[Rotating log writer]
         Cfg[Config store\nlocal file]
     end
+    Labelary[Labelary\nexternal service]
     Web[Web App\nbrowser JS] -- HTTP, localhost --> Core
     Core -- TCP, raw data --> Printer[(Network Printer)]
+    Core -- Virtual mode --> Store
+    Core --> Inspector
+    Store <--> Preview
+    Preview -- optional HTTPS POST --> Labelary
     UI <-- read/write --> Cfg
     Core <-- read --> Cfg
-    Core --> Log
+    Core -- integration API metadata --> Log
     UI -- view --> Log
 ```
 
@@ -44,7 +52,9 @@ This is a deliberate simplification over running the HTTP agent as a separate ba
 ## Key architectural values
 
 - **Fail fast, not silently.** Every network operation (TCP connect, write) must have an explicit timeout. See timeout values below.
-- **Few moving parts.** No database, no background service registration, no external dependencies beyond what's compiled into the binary.
+- **Few moving parts.** No database or background service registration. The
+  dashboard assets are embedded; Labelary is an optional external service used
+  only when preview rendering is enabled.
 - **Self-diagnosable.** Logs and a status endpoint exist so a user can figure out what went wrong without contacting the maintainer.
 
 ## Timeouts
@@ -59,12 +69,93 @@ These values are defaults; do not hardcode them so tightly that they can't be ad
 
 ## Logging
 
-- Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrintBridge/` on macOS, `%APPDATA%\PrintBridge\` on Windows).
-- Log every request: timestamp, endpoint, target host:port, outcome (success/error), and error detail if applicable.
-- Rotation policy: cap individual log file size (e.g. 5MB) and retain a small number of rotated files (e.g. 3) — exact values are an implementation detail, not a business requirement, but must exist so logs don't grow unbounded on a machine left running for a long session.
+- Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrintBridge/` on macOS, `%APPDATA%\PrintBridge\` on Windows). Defaults are 5 MiB per file and three backups.
+- Log integration API requests (`/ping`, `/status`, and `/print`): timestamp,
+  endpoint, target host:port when applicable, outcome, and error detail. Do not
+  log captured payloads. Inspector requests are not written to this request log.
 - Viewable live from within the app (see `05-ux/tray-app-spec.md`) — the user should not need to hunt through the filesystem to see recent activity.
 
-## What this document does not cover
+## Virtual Mode architecture
+
+Approved by ADR-006; implementation status lives in the
+[sprint checklist](../08-backlog/virtual-mode-sprint.md).
+
+### Implemented routing foundation (VM-1)
+
+`internal/server/destination.go` defines a small `Destination` interface for
+opaque byte delivery and readiness checks. The default TCP implementation owns
+connection/write timeouts and connection cleanup. HTTP validation, response
+codes, and logging remain in the server handlers.
+
+The router fixes its destination when constructed. A settings restart creates
+a new router; requests already being handled retain their original destination.
+Neither submission nor readiness checks fall back to another destination on
+failure. No format detection or renderer is involved in this path.
+
+VM-4 routes configured Virtual jobs to the application capture store and
+returns their IDs. `/status` checks that store locally. Physical routing remains
+the default. VM-5 added same-origin-protected metadata, payload download,
+cached preview, and clear routes to the same listener. VM-6 added the bundled
+interactive dashboard, with bounded polling and safe local payload inspection.
+VM-7 added optional, bounded asynchronous previews through a fixed HTTPS
+Labelary adapter; rendering is independent of capture success.
+
+### Implemented capture foundation (VM-2)
+
+`internal/capture` now provides the bounded, concurrency-safe session store and
+preview reservation/result hooks. The application-owned server retains the
+same store through listener restarts; desktop shutdown closes it. Read snapshots
+cannot mutate stored payloads, and stale preview results cannot restore removed
+jobs. The inspector API exposes bounded job metadata, original-payload
+downloads, cached previews, clear operations, and render/retry actions.
+
+See [virtual-capture-store.md](virtual-capture-store.md) for numeric limits,
+ownership, eviction, request size checks, and cancellation semantics.
+
+### Implemented configuration foundation (VM-3)
+
+Configuration version 1 persists destination and preview preferences. Valid
+legacy files migrate in memory and are upgraded on explicit Save. Settings
+exposes destination, Labelary, and label-size/density controls; mode changes
+preserve physical printer defaults.
+
+Invalid or ambiguous files remain untouched; the application opens in recovery
+with no runnable destination and with Settings Save disabled. A valid Virtual
+selection starts capture routing without a physical fallback.
+See [configuration and recovery](../06-config/config-schema.md) for details.
+
+### Virtual Mode runtime architecture
+
+```mermaid
+flowchart LR
+    Web[Web app] --> API[Existing localhost API]
+    API --> Route{Saved destination}
+    Route -->|Physical| TCP[Raw TCP transport]
+    TCP --> Printer[Network printer]
+    Route -->|Virtual| Store[Bounded session capture store]
+    Store --> Inspector[Local browser inspector]
+    Store --> Detect[Lightweight ZPL detection]
+    Detect -->|Rendering enabled| Worker[Bounded asynchronous renderer]
+    Worker -->|HTTPS POST| Labelary[Labelary]
+    Labelary -->|PNG preview| Worker
+    Worker --> Store
+```
+
+The router, capture store, and renderer run within the existing Go application.
+The dashboard uses the system browser; no webview, standalone frontend service,
+or additional listener is required. Assets are bundled for offline inspection.
+
+The store belongs to the application lifecycle, survives listener restarts,
+and is cleared on exit. Capture success is independent of rendering success.
+Clear/eviction invalidates pending preview results. VM-2 establishes retention, request, and outstanding-work limits; VM-7 adds
+provider timeout, worker, response-size, and decoded-image limits.
+
+Physical transport must not depend on format detection or rendering. Virtual
+mode also replaces physical `/status` probes with local capture readiness.
+See [API behavior](../04-api/virtual-mode.md) and
+[the testing plan](../07-build-deploy/testing.md).
+
+## Related specifications
 
 - Exact API request/response schemas — see `04-api/openapi.yaml`.
 - UI screens/states — see `05-ux/tray-app-spec.md`.

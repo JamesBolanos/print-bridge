@@ -37,6 +37,12 @@ state.
 
 ## Pull Requests
 
+The [Virtual Mode sprint](DOCS/08-backlog/virtual-mode-sprint.md) is implemented
+task by task; VM-9's native release checks remain open. When changing sprint
+behavior, update its tests and documentation together and record verification
+in the sprint log. See the [test inventory and sprint test matrix](DOCS/07-build-deploy/testing.md).
+Automated preview tests use fake renderer responses, not public Labelary calls.
+
 - Keep PRs small and describe the user-visible behavior being changed.
 - Add or update tests when changing API, config, logging, or server behavior.
 - Keep generated release artifacts out of commits.

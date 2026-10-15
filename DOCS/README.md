@@ -13,6 +13,18 @@ The current beta combines a localhost HTTP API, raw TCP printer passthrough,
 desktop configuration UI, tray behavior, local logging, and release packaging
 notes.
 
+## Virtual Mode sprint status
+
+[Virtual Mode and Browser Inspector](08-backlog/virtual-mode-sprint.md) is
+implemented through VM-8, with VM-9 automated integration coverage using a
+local fake printer and fake renderer. VM-9 remains open pending interactive
+native tray/browser and packaged-installer smoke checks. PDF/binary input is
+deferred.
+
+See [implemented Virtual API and inspector behavior](04-api/virtual-mode.md),
+the [test inventory and verification plan](07-build-deploy/testing.md), and
+the sprint checklist and verification log.
+
 ## Suggested Read Order
 
 Read documents in this order when trying to understand or change the project.
@@ -25,11 +37,13 @@ Each builds on the ones before it.
 5. `03-architecture/architecture-overview.md` — components and tech stack, with rationale.
 6. `03-architecture/security-model.md` — what security model is used and why, and what is explicitly out of scope.
 7. `03-architecture/decisions.md` — ADR log. **Read before proposing any architectural change** — many "obvious improvements" (auto-start, auth tokens, paid signing) were deliberately deferred and are logged here with reasoning.
-8. `04-api/openapi.yaml` — the API contract. This is the primary source of truth for endpoint behavior; prose elsewhere is explanatory, not authoritative.
+8. `04-api/openapi.yaml` — the current API contract. `04-api/virtual-mode.md` records implemented Virtual behavior and inspector routes; update OpenAPI alongside implementation.
 9. `05-ux/tray-app-spec.md` — UI states and behavior.
 10. `06-config/config-schema.md` — settings fields and storage format.
 11. `07-build-deploy/*.md` — build pipeline and installer instructions per platform.
-12. `08-backlog/epics.md` then `08-backlog/stories.md` — the actual units of work, in priority order.
+12. `08-backlog/epics.md` and `08-backlog/stories.md` — foundation backlog.
+    The completed Virtual Mode sprint's scope, evidence, and remaining native
+    release checks are recorded in `08-backlog/virtual-mode-sprint.md`.
 
 ## Scope Notes
 
@@ -45,8 +59,10 @@ Each builds on the ones before it.
 
 ## Status
 
-These docs describe the current beta scope and should stay in sync with
-implementation decisions as the repo evolves.
+These docs describe the current beta and the approved Virtual Mode sprint.
+The sprint checklist distinguishes implemented behavior from outstanding
+release verification; future behavior must not be presented as shipped until
+its task is complete.
 
 ## Folder structure
 
@@ -63,10 +79,12 @@ DOCS/
 │   └── bpmn-user-workflow.md
 ├── 03-architecture/
 │   ├── architecture-overview.md
+│   ├── virtual-capture-store.md
 │   ├── security-model.md
 │   └── decisions.md
 ├── 04-api/
-│   └── openapi.yaml
+│   ├── openapi.yaml
+│   └── virtual-mode.md
 ├── 05-ux/
 │   └── tray-app-spec.md
 ├── 06-config/
@@ -74,10 +92,12 @@ DOCS/
 ├── 07-build-deploy/
 │   ├── build-pipeline.md
 │   ├── installer-windows.md
-│   └── installer-macos.md
+│   ├── installer-macos.md
+│   └── testing.md
 ├── 08-backlog/
 │   ├── epics.md
-│   └── stories.md
+│   ├── stories.md
+│   └── virtual-mode-sprint.md
 └── 09-legal/
     └── disclaimer.md
 ```

@@ -25,6 +25,12 @@ const (
 	DefaultHTTPPort = 8080
 	// DefaultPrinterPort is the common raw TCP printing port.
 	DefaultPrinterPort = 9100
+	// CurrentVersion identifies the persisted destination/preview schema.
+	CurrentVersion = 1
+	// DestinationPhysical selects raw TCP printing.
+	DestinationPhysical = "physical"
+	// DestinationVirtual selects local capture once virtual routing is available.
+	DestinationVirtual = "virtual"
 )
 
 // DefaultAllowedOrigins is intentionally empty so new installs deny browser CORS requests.
@@ -32,17 +38,36 @@ var DefaultAllowedOrigins = []string{}
 
 // Config contains the persisted print bridge settings.
 type Config struct {
-	HTTPPort              int      `json:"httpPort"`
-	DefaultPrinterPort    int      `json:"defaultPrinterPort"`
-	DefaultPrinterAddress string   `json:"defaultPrinterAddress"`
-	AllowedOrigins        []string `json:"allowedOrigins"`
+	ConfigVersion         int           `json:"configVersion"`
+	DestinationType       string        `json:"destinationType"`
+	Preview               PreviewConfig `json:"preview"`
+	HTTPPort              int           `json:"httpPort"`
+	DefaultPrinterPort    int           `json:"defaultPrinterPort"`
+	DefaultPrinterAddress string        `json:"defaultPrinterAddress"`
+	AllowedOrigins        []string      `json:"allowedOrigins"`
 }
 
-// LoadResult describes whether loading config required creating or restoring defaults.
+// PreviewConfig holds rendering preferences without changing print payloads.
+type PreviewConfig struct {
+	LabelaryEnabled   bool    `json:"labelaryEnabled"`
+	LabelWidthInches  float64 `json:"labelWidthInches"`
+	LabelHeightInches float64 `json:"labelHeightInches"`
+	PrintDensityDpmm  int     `json:"printDensityDpmm"`
+}
+
+// DefaultPreview returns rendering-off preferences for a 4-by-6-inch label.
+func DefaultPreview() PreviewConfig {
+	return PreviewConfig{LabelWidthInches: 4, LabelHeightInches: 6, PrintDensityDpmm: 8}
+}
+
+// LoadResult distinguishes first-run creation, in-memory migration, and repair.
+// RecoveryRequired means the returned display values must not start a listener.
 type LoadResult struct {
-	Created      bool
-	UsedDefaults bool
-	Warning      string
+	Created          bool
+	UsedDefaults     bool
+	Migrated         bool
+	RecoveryRequired bool
+	Warning          string
 }
 
 // Default returns a fresh copy of the default configuration.
@@ -51,6 +76,9 @@ func Default() Config {
 	copy(origins, DefaultAllowedOrigins)
 
 	return Config{
+		ConfigVersion:         CurrentVersion,
+		DestinationType:       DestinationPhysical,
+		Preview:               DefaultPreview(),
 		HTTPPort:              DefaultHTTPPort,
 		DefaultPrinterPort:    DefaultPrinterPort,
 		DefaultPrinterAddress: "",
@@ -87,8 +115,8 @@ func LogPath() (string, error) {
 
 // LoadOrCreate reads config from path or creates a default config when missing.
 //
-// Malformed or invalid config is replaced with defaults so the desktop app can
-// still start and show the user a recoverable warning.
+// Valid legacy files migrate only in memory. Invalid files are left untouched;
+// the returned recovery config has no destination and cannot start a listener.
 func LoadOrCreate(path string) (Config, LoadResult, error) {
 	if path == "" {
 		var err error
@@ -110,31 +138,17 @@ func LoadOrCreate(path string) (Config, LoadResult, error) {
 		return Config{}, LoadResult{}, fmt.Errorf("read config: %w", err)
 	}
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		cfg := Default()
-		if saveErr := Save(path, cfg); saveErr != nil {
-			return Config{}, LoadResult{}, saveErr
-		}
-		return cfg, LoadResult{
-			UsedDefaults: true,
-			Warning:      fmt.Sprintf("config was malformed and defaults were restored: %v", err),
-		}, nil
-	}
-
-	normalized, err := Normalize(cfg)
+	cfg, migrated, err := decodeConfig(data)
 	if err != nil {
-		cfg := Default()
-		if saveErr := Save(path, cfg); saveErr != nil {
-			return Config{}, LoadResult{}, saveErr
-		}
-		return cfg, LoadResult{
-			UsedDefaults: true,
-			Warning:      fmt.Sprintf("config was invalid and defaults were restored: %v", err),
+		recovery := Default()
+		recovery.DestinationType = ""
+		return recovery, LoadResult{
+			UsedDefaults: true, RecoveryRequired: true,
+			Warning: fmt.Sprintf("Configuration could not be loaded: %v. Listener remains stopped; the original file is unchanged. Repair %s and restart PrintBridge.", err, path),
 		}, nil
 	}
 
-	return normalized, LoadResult{}, nil
+	return cfg, LoadResult{Migrated: migrated}, nil
 }
 
 // Save validates and atomically writes config to path.
@@ -187,6 +201,23 @@ func Save(path string, cfg Config) error {
 
 // Normalize validates config values and applies whitespace cleanup.
 func Normalize(cfg Config) (Config, error) {
+	if cfg.ConfigVersion != CurrentVersion {
+		return Config{}, fmt.Errorf("unsupported configVersion %d", cfg.ConfigVersion)
+	}
+	if cfg.DestinationType != DestinationPhysical && cfg.DestinationType != DestinationVirtual {
+		return Config{}, fmt.Errorf("destinationType must be physical or virtual")
+	}
+	if !(cfg.Preview.LabelWidthInches > 0 && cfg.Preview.LabelWidthInches <= 15) {
+		return Config{}, fmt.Errorf("preview.labelWidthInches must be finite and greater than 0, up to 15")
+	}
+	if !(cfg.Preview.LabelHeightInches > 0 && cfg.Preview.LabelHeightInches <= 15) {
+		return Config{}, fmt.Errorf("preview.labelHeightInches must be finite and greater than 0, up to 15")
+	}
+	switch cfg.Preview.PrintDensityDpmm {
+	case 6, 8, 12, 24:
+	default:
+		return Config{}, fmt.Errorf("preview.printDensityDpmm must be 6, 8, 12, or 24")
+	}
 	if cfg.HTTPPort < 1024 || cfg.HTTPPort > 65535 {
 		return Config{}, fmt.Errorf("httpPort must be between 1024 and 65535")
 	}

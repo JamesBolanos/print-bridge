@@ -9,6 +9,8 @@ shortcuts, no service registration, no auto-start entry.
 ## What the installer does
 
 - Copies the print-bridge executable to `Program Files\print-bridge\`.
+- The executable includes the bundled Inspector dashboard assets; no separate
+  frontend server or downloaded dashboard assets are required.
 - Creates Start Menu and Desktop shortcuts.
 - **Does not** register any Startup/auto-run entry, per ADR-001.
 - Sets the app's data directory (`%APPDATA%\PrintBridge\`) on first run, not at install time — the app itself creates this on launch if absent.

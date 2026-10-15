@@ -71,3 +71,41 @@ to fill in.
 **Why rejected:** Significant scope and complexity increase (rendering engine, per-printer-language conversion logic) for a free tool with one maintainer. The calling web app is expected to already generate raw printer-language data, which is the standard pattern for label-printing integrations.
 
 **Do not reintroduce without:** clear evidence this is blocking real adoption, and likely as a future scoped addition, not a current-beta amendment.
+
+---
+
+## ADR-006: Virtual sink with separate, optional preview rendering
+
+**Decision:** Approved on 2026-10-14 for the
+[Virtual Mode sprint](../08-backlog/virtual-mode-sprint.md). Routing, capture,
+configuration, and submission/readiness were implemented through VM-4;
+inspector and asynchronous Labelary rendering through VM-7; and VM-8 added the
+desktop settings and Inspector launch actions. VM-9 added live-listener
+integration coverage. Native tray/browser and installer checks remain release
+follow-up, as recorded in the sprint log.
+The implementation uses a small destination interface to choose the physical
+TCP transport or a bounded in-memory virtual capture store. The saved destination applies globally
+and is selected once per accepted job. Virtual mode never falls back to a
+physical destination, including after a preview failure.
+
+Serve the inspector from the existing loopback HTTP listener with assets
+bundled in the application. Keep the native Fyne settings/tray and single
+process. Capture and raw text/hex inspection work offline.
+
+Detect likely ZPL only in the inspector. Optional Labelary rendering uses a
+separate asynchronous adapter and produces PNG previews after explicit user
+enablement. It does not mutate captured or physically transmitted bytes. Width,
+height, and print density are preview settings, not a printer profile system.
+
+**Rationale:** Developers can test existing browser integrations without
+hardware while the transport remains vendor-neutral. External rendering stays
+optional, replaceable, and independent of successful capture.
+
+**Relationship to ADR-005:** The raw physical transport remains unchanged.
+Optional preview rendering is an approved scope extension; PDF/image-to-ZPL
+conversion, PDF/binary submission, and an embedded ZPL renderer are deferred.
+
+**Data boundary:** Store decoded JSON text bytes for the running session only.
+Do not include payloads in rotating logs. Dashboard history access is separate
+from the integration CORS allow-list, as specified in the inspector access
+section of `security-model.md`. No API key is added to callers' print requests.

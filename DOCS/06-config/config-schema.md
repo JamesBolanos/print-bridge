@@ -1,22 +1,36 @@
 # Config Schema — print-bridge
 
-Read `05-ux/tray-app-spec.md` alongside this — that document defines how these fields are edited; this document defines what they are, where they live, and how they're validated.
+Read `05-ux/tray-app-spec.md` alongside this document for settings UI behavior.
+
+Version 1 is implemented in VM-3 and virtual API routing in VM-4.
+Destination/preview controls are implemented in VM-8; optional external
+rendering is implemented in VM-7.
+A saved Virtual destination captures jobs locally without physical fallback.
 
 ## Storage location
-
-A local JSON file, platform-appropriate path:
 
 | Platform | Path |
 |---|---|
 | macOS | `~/Library/Application Support/PrintBridge/config.json` |
-| Windows | `%APPDATA%\PrintBridge\config.json` |
+| Windows | `%APPDATA%\\PrintBridge\\config.json` |
 
-Rationale: a plain file, not a database, per the "few moving parts" architectural value in `03-architecture/architecture-overview.md`. JSON chosen over YAML/TOML since Go's standard library handles it with no extra dependency, and there's no need for human hand-editing to be especially pleasant — the Settings UI is the intended edit path.
+Settings are stored as a local JSON file and saved atomically. No database or
+external configuration service is required.
 
 ## Schema
 
+New installations create:
+
 ```json
 {
+  "configVersion": 1,
+  "destinationType": "physical",
+  "preview": {
+    "labelaryEnabled": false,
+    "labelWidthInches": 4,
+    "labelHeightInches": 6,
+    "printDensityDpmm": 8
+  },
   "httpPort": 8080,
   "defaultPrinterPort": 9100,
   "defaultPrinterAddress": "",
@@ -24,36 +38,94 @@ Rationale: a plain file, not a database, per the "few moving parts" architectura
 }
 ```
 
-| Field | Type | Default | Validation |
+| Field | Type | Default | Validation / behavior |
 |---|---|---|---|
-| `httpPort` | integer | `8080` | 1024–65535 (avoid requiring elevated privileges for ports below 1024); must not already be in use at listener start |
-| `defaultPrinterPort` | integer | `9100` | 1–65535; pre-fills the `printerPort` field for convenience but does not restrict what a caller can send in a `/print` request — the API itself accepts any port per-request |
-| `defaultPrinterAddress` | string | `""` (empty) | Optional. Free text (IP or hostname). Not validated as reachable at save time — reachability is checked live via `/status`, not enforced here |
-| `allowedOrigins` | array of strings | `[]` | Each entry must be a valid origin (scheme + host + optional port, no path). Empty by default; no browser web app can successfully call the API until the user adds the required origin(s) |
+| `configVersion` | integer | `1` | Current schema; valid unversioned/version-0 files migrate in memory |
+| `destinationType` | string | `physical` for new/legacy files | Version 1 requires exactly `physical` or `virtual` |
+| `preview` | object | As above | Optional; missing preferences get defaults, explicit invalid/null values are rejected |
+| `httpPort` | integer | `8080` | 1024–65535; port must be available at startup |
+| `defaultPrinterPort` | integer | `9100` | 1–65535; supplies omitted/zero request ports |
+| `defaultPrinterAddress` | string | Empty | Optional display/settings convenience; does not replace the required Physical request hostname |
+| `allowedOrigins` | string array | Empty | HTTP(S) origins with scheme, host, optional port; no query, fragment, credentials, or page path |
 
-## Default `allowedOrigins`
+## Destination and preview settings
 
-Ship with no allowed browser origins by default:
+- `destinationType` is global. It routes both
+  `/print` and `/status`; a request cannot override it. Switching destination
+  preserves the configured physical address and port.
+- `labelaryEnabled` is a boolean, false by default. The Settings control
+  discloses that rendering sends label contents to an external service. VM-7
+  prevents new submissions and cancels pending work when disabled.
+- Width and height are finite numbers greater than zero and at most 15 inches.
+  Density must be 6, 8, 12, or 24 dots/mm. Defaults are 4-by-6 inches at 8 dpmm,
+  not values detected from a physical printer. VM-7 uses Labelary's fixed HTTPS
+  endpoint and snapshots preferences per render attempt.
+- Preview preferences never alter source bytes or physical output. Changing
+  dimensions or density cancels in-flight attempts and invalidates cached
+  images while retaining captured payloads. Disabling rendering cancels pending
+  work but retains successful previews.
+- The desktop Settings form exposes destination and preview preferences.
+  Switching modes preserves the physical printer address and port; changing
+  HTTP port restarts the listener and updates the Inspector launcher URL.
 
-```
-[]
-```
+## Browser origins and API defaults
 
-The user adds the origin(s) they actually need via Settings. Examples include local development origins such as `http://localhost:3000` or production origins such as `https://app.example.com`. Document clearly (in install/onboarding docs, not this file) that **the calling web app's origin must be added here** — this is the single most common integration stumbling block for a CORS-only tool.
+New installations start with an empty browser allow-list. Add only the required
+web app origins, such as `http://localhost:3000` or `https://app.example.com`.
+The current Gin CORS configuration uses this list; non-browser local clients
+remain within the existing machine trust boundary.
 
-## Relationship to the API
+`defaultPrinterPort` supplies omitted/zero `/print` ports and omitted `/status`
+ports. Explicit valid request ports remain supported.
+`defaultPrinterAddress` does not replace the required Physical `/print`
+hostname. Virtual `/print` requests may omit a hostname. Changing `httpPort`
+requires a listener restart.
+See [the current API contract](../04-api/openapi.yaml) and
+[virtual behavior](../04-api/virtual-mode.md).
 
-- `defaultPrinterPort` and `defaultPrinterAddress` are **UI/settings conveniences only** — they support app display and any built-in test-print feature but do not constrain what a `/print` request can specify. The API contract in `04-api/openapi.yaml` is unaffected by these defaults.
-- `allowedOrigins` directly maps to the CORS configuration used by the Gin server — this is the one config field with real runtime/security effect, not just UI convenience.
-- `httpPort` is the actual bind port for the Gin server — changing it requires the listener restart described in `03-architecture/architecture-overview.md` and `05-ux/tray-app-spec.md`.
+## Migration and versioning
 
-## Migration / versioning
+A valid file without `configVersion`, or with version 0, is legacy only if it
+contains the original fields and no destination/preview fields. Existing ports,
+printer address, and origins are preserved, subject to the existing whitespace
+normalization. Physical and rendering-off defaults are added in memory.
 
-Not required for the current beta — the app creates `config.json` on first
-launch. If the schema changes in a future version, add a `configVersion` field
-at that time.
+Loading a legacy file does not rewrite it. Its next explicit Settings save
+writes version 1 using the existing atomic replacement operation. New installs
+create version 1 directly. Runtime validation requires the migrated version-1
+representation; it never guesses a missing destination.
 
-## What is NOT stored in config
+Versioned files must specify a destination. Missing preview objects/preferences
+use safe defaults. Explicit zero, null, wrong types, or unsupported values are
+rejected. Keys are exact and case-sensitive; unknown or duplicate fields,
+unsupported versions, multiple JSON documents, and new fields in an unversioned
+file are rejected rather than silently ignored or merged.
 
-- Print job history/logs — these live in the rotating log file (`03-architecture/architecture-overview.md`), not in `config.json`.
-- Window position/size or other pure UI state — not required for the current beta; the app can open at a sensible default size each launch.
+## Invalid-file recovery
+
+Malformed or invalid existing files are left untouched. The loader returns a
+repair warning and display-only defaults with an empty, invalid destination.
+Normalization, Save, and listener startup reject that recovery configuration.
+This replaces the earlier behavior of overwriting invalid files with defaults.
+
+The desktop remains open, shows the affected path and repair instructions, and
+disables Settings Save during recovery. Repair the file and restart the app.
+There is no implicit reset to Physical or destructive repair button. File read
+errors are returned as errors, not mistaken for a missing first-run config.
+
+A valid Virtual configuration starts the loopback listener and routes `/print`
+to session capture. `/status` reports capture readiness without probing a
+printer. The Settings destination selector changes the mode and restarts the
+listener while preserving the configured physical printer address and port.
+
+## Data outside configuration
+
+Request metadata lives in the rotating log. Captured payloads, preview images,
+and pending render work stay in bounded session memory, not in config or logs.
+Initial limits are documented in
+[the capture-store design](../03-architecture/virtual-capture-store.md);
+request, storage, and renderer bounds are implementation defaults, not
+additional user settings in this sprint.
+
+Window position/size is not persisted. See the
+[sprint checklist](../08-backlog/virtual-mode-sprint.md) for implementation status.

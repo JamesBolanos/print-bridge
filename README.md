@@ -102,8 +102,8 @@ The API is documented in [`DOCS/04-api/openapi.yaml`](DOCS/04-api/openapi.yaml).
 Endpoints:
 
 - `GET /ping` - check that the local bridge is running.
-- `GET /status?host=<printer_host>&port=<printer_port>` - check whether a printer is reachable.
-- `POST /print` - send raw printer-language text to a printer.
+- `GET /status?host=<printer_host>&port=<printer_port>` - check printer reachability, or local capture readiness in Virtual mode.
+- `POST /print` - send raw text to the configured Physical or Virtual destination.
 
 Example print request:
 
@@ -121,7 +121,10 @@ curl -X POST http://localhost:8080/print \
 
 ## Security Model
 
-`print-bridge` is designed as a localhost desktop bridge. Browser access is controlled through a configured CORS allow-list. This keeps integration simple for web developers while matching the trust model commonly used by local browser printing bridge tools.
+`print-bridge` is designed as a localhost desktop bridge. Integration API
+browser access is controlled through a configured CORS allow-list. Inspector
+routes use separate local Host/origin checks before exposing captured jobs.
+Neither mechanism is general-purpose authentication.
 
 Important limits:
 
@@ -134,16 +137,25 @@ See [`DOCS/03-architecture/security-model.md`](DOCS/03-architecture/security-mod
 
 ## Configuration
 
+The configuration now uses schema version 1 for destination and preview
+preferences. Valid older files migrate in memory and are upgraded on the next
+explicit Settings save. Invalid files remain untouched, with the listener
+stopped and repair instructions shown in the app. See the
+[configuration schema](DOCS/06-config/config-schema.md).
+
+Virtual capture is available through the API and can be selected in Settings.
+The inspector has bounded local APIs and an offline browser dashboard, launched
+from the main window or tray. Optional Labelary ZPL previews are disabled by
+default, available only in Virtual mode, and disclose that label contents are
+sent to the external service when enabled. See the
+[Virtual Mode review steps](DOCS/07-build-deploy/testing.md#vm-4-local-review).
+
 On first launch, `print-bridge` creates a local `config.json` file:
 
 - macOS: `~/Library/Application Support/PrintBridge/config.json`
 - Windows: `%APPDATA%\PrintBridge\config.json`
 
-New installs start with an empty CORS allow-list:
-
-```text
-[]
-```
+New installs start with an empty CORS allow-list (`allowedOrigins: []`).
 
 Add only the web app origins this installation needs from the Settings screen. For example, a local development app might add `http://localhost:3000`, while a deployed app might add `https://app.example.com`. With an empty list, browser-based callers cannot use the API until an origin is added; non-browser local tools such as `curl` are not governed by CORS.
 
@@ -160,6 +172,23 @@ for the development workflow and [`SECURITY.md`](SECURITY.md) for responsible
 security reporting.
 
 ## Development Roadmap
+
+The Virtual Mode implementation and automated integration work for the
+**Virtual Mode and Browser Inspector** sprint are complete: capture
+ZPL/raw text locally without hardware, inspect jobs in a browser dashboard,
+and optionally render ZPL through Labelary. PDF/binary input is deferred.
+VM-1 through VM-8 are implemented, and VM-9 automated integration coverage
+is in place: routing, storage, configuration, virtual
+API capture/readiness, protected inspector routes, the offline dashboard, and
+optional asynchronous previews, desktop controls, and Inspector launch.
+Automated integration coverage includes a local TCP fake printer and fake
+renderer. Interactive macOS/Windows tray/browser and DMG/MSI install smoke
+checks remain release follow-up, so VM-9 is not yet checked complete; see the
+[sprint verification record](DOCS/08-backlog/virtual-mode-sprint.md).
+
+The [sprint record](DOCS/08-backlog/virtual-mode-sprint.md) documents the
+completed work, evidence, and remaining platform-specific verification. See
+the [testing inventory and sprint test plan](DOCS/07-build-deploy/testing.md).
 
 Completed beta foundation:
 

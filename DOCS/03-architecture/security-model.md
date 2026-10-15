@@ -28,3 +28,49 @@ Per `01-business/constraints.md` and `03-architecture/decisions.md`: no token/AP
 ## Non-affiliation as a trust signal
 
 The non-affiliation disclaimer (`09-legal/disclaimer.md`) also serves a security-communication purpose: users should understand this is an independent implementation they're choosing to trust, not a printer-manufacturer product inheriting that manufacturer's support/security posture.
+
+## Inspector access
+
+Status: implemented in VM-5. Inspector routes expose retained print payloads,
+so they use a narrower browser access policy than print submission. The
+existing CORS risk table above still describes the integration API. See
+[ADR-006](decisions.md) and the [sprint checklist](../08-backlog/virtual-mode-sprint.md).
+
+- Keep the listener on `127.0.0.1` and use a canonical local dashboard origin.
+  Inspector routes require `Host: 127.0.0.1:<active-port>`, including requests
+  without an Origin header.
+- Do not apply the integration origin allow-list to history, payload download,
+  previews, clear, or render/retry routes. A website allowed to submit print
+  jobs must not gain browser access to other jobs or inspector actions.
+- Allow the local dashboard at `http://127.0.0.1:<active-port>` to read its
+  data. A supplied Origin must match exactly; null or foreign origins are
+  rejected. Missing Origin is permitted on reads for top-level navigation and
+  local non-browser clients. If `Sec-Fetch-Site` is present, reads permit only
+  `same-origin` or `none`; mutations require exact Origin and permit only
+  `same-origin` Fetch Metadata when present.
+- Use non-GET methods for clear and render/retry; validate browser origin on
+  these actions so a cross-site form cannot clear history or trigger uploads.
+- Render raw text using text nodes, not HTML. Serve downloads as attachments
+  with a non-executable content type and `nosniff`. Use no-store for job data
+  and previews, prevent foreign framing, and avoid remote scripts/assets.
+- Keep full payloads out of URLs, normal logs, and persistent app storage.
+  User-initiated copies/downloads are intentional exports; clearing the store
+  cannot remove copies the user has already exported.
+- Bound memory, response/image sizes, and pending work. Clear/eviction must
+  prevent stale renderer callbacks from reintroducing payloads.
+- Labelary is disabled by default. Explicit enablement discloses that label
+  contents leave the machine. Use HTTPS POST to the configured implementation's
+  fixed provider endpoint; do not introduce arbitrary renderer URLs this sprint.
+  Network failures never cause a physical print or discard captured data.
+
+VM-5 and VM-7 implement metadata listing/detail, attachment download, cached
+preview retrieval, clear, and protected render/retry. The renderer only sends
+likely-ZPL payloads to Labelary when explicitly enabled; newly captured jobs
+are queued only in that mode and old jobs require a user action. The fixed
+provider receives HTTPS POST bodies, with bounded worker, queue, duration,
+response, and image limits. Provider failures never delete captured data.
+
+This does not add caller API keys or general local-process authentication.
+Same-machine non-browser clients remain within the existing trust boundary.
+Inspector Host/origin protection is part of this sprint; broader hardening of
+the existing print integration routes is separate work.

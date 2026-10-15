@@ -52,4 +52,39 @@ flowchart TD
 
 - The **CORS check happens in the browser**, not something print-bridge can control beyond setting the correct response headers. For normal browser `fetch()` calls, the web app sees a browser-level CORS error rather than a print-bridge error response if the origin is not allow-listed. CORS does not block same-machine non-browser clients.
 - Both the connect step and the write step must be bounded by a timeout (see `03-architecture/architecture-overview.md` for the specific value) so BR-6 (predictable failure behavior) holds even when a printer is powered on but unresponsive, not just when it's fully offline.
-- Every request (success or failure) should be written to the local rotating log, including the target host/port, so a user can self-diagnose repeated failures without contacting support.
+- Integration API requests (`/ping`, `/status`, and `/print`) are written to
+  the local rotating log with target host/port where applicable. Inspector
+  requests are not logged, and captured payloads are never included.
+
+## Virtual Mode flow (implemented)
+
+See the [Virtual Mode API contract](../04-api/virtual-mode.md) and
+[sprint verification record](../08-backlog/virtual-mode-sprint.md).
+
+```mermaid
+sequenceDiagram
+    participant W as Web app
+    participant B as PrintBridge
+    participant S as Session capture store
+    participant I as Browser inspector
+    participant R as Optional Labelary renderer
+    W->>B: GET /status (host optional)
+    B-->>W: Virtual capture readiness (no TCP probe)
+    W->>B: POST /print with JSON text
+    B->>B: Validate and snapshot Virtual destination
+    B->>S: Store exact decoded-text bytes
+    S-->>B: Job ID
+    B-->>W: 200 OK with virtual destination and job ID
+    I->>B: Request job updates
+    B-->>I: Captured job and raw inspection data
+    opt Likely ZPL and external rendering enabled
+        S->>R: Queue bounded asynchronous rendering
+        R-->>S: PNG preview or preview error
+        I->>B: Request preview status/result
+        B-->>I: Preview or recoverable failure
+    end
+```
+
+No branch in this flow contacts a physical printer. Preview failure leaves
+capture successful. The Physical flow above is preserved; mode changes apply
+to subsequent accepted jobs. Logs record metadata rather than full payloads.

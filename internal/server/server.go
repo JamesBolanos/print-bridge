@@ -1,11 +1,13 @@
 // Package server provides the localhost HTTP API that browser apps use to
-// reach network printers.
+// reach network printers or capture jobs in session memory.
 package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -17,6 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"print-bridge/internal/activity"
+	"print-bridge/internal/capture"
 	"print-bridge/internal/config"
 	"print-bridge/internal/logging"
 )
@@ -41,6 +44,13 @@ type Options struct {
 	ConnectTimeout time.Duration
 	WriteTimeout   time.Duration
 	DialContext    DialContextFunc
+	// Destination overrides the physical transport only. Virtual mode always
+	// uses CaptureStore, so an injected transport cannot bypass the saved mode.
+	Destination Destination
+	// CaptureStore owns virtual jobs across listener restarts. If nil, NewRouter
+	// creates a store for its lifetime; application callers should supply one.
+	CaptureStore *capture.Store
+	previews     *previewManager
 }
 
 // PrintJobRequest is the JSON payload accepted by POST /print.
@@ -65,20 +75,48 @@ type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
 	lastErr    error
+	captures   *capture.Store
+	previews   *previewManager
 }
 
 // New creates a server that can be started with Start.
 func New(cfg config.Config, logger *logging.Logger) *Server {
-	return &Server{cfg: cfg, logger: logger}
+	captures := capture.NewStore()
+	return &Server{
+		cfg: cfg, logger: logger, captures: captures,
+		previews: newPreviewManager(captures, nil),
+	}
 }
+
+// CaptureStore returns the application session's store. Listener restarts keep
+// it alive; Close releases it when the application exits.
+func (s *Server) CaptureStore() *capture.Store { return s.captures }
 
 // NewRouter builds the Gin router for the local print bridge API.
 func NewRouter(opts Options) *gin.Engine {
-	opts = normalizeOptions(opts)
-
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(cors.New(corsConfig(opts.Config.AllowedOrigins)))
+	var err error
+	opts, err = normalizeOptions(opts)
+	if err != nil {
+		// Invalid settings must never select the physical fallback.
+		router.NoRoute(func(c *gin.Context) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"message": err.Error()})
+		})
+		return router
+	}
+	if opts.previews == nil {
+		opts.previews = newPreviewManager(opts.CaptureStore, nil)
+	}
+	opts.previews.Configure(opts.Config.Preview, opts.Config.DestinationType == config.DestinationVirtual)
+	corsMiddleware := cors.New(corsConfig(opts.Config.AllowedOrigins))
+	router.Use(func(c *gin.Context) {
+		if isInspectorRequest(c.Request.URL.Path) {
+			c.Next()
+			return
+		}
+		corsMiddleware(c)
+	})
 
 	router.GET("/ping", func(c *gin.Context) {
 		record(opts, "/ping", "", "success", "pong")
@@ -90,6 +128,7 @@ func NewRouter(opts Options) *gin.Engine {
 	router.POST("/print", func(c *gin.Context) {
 		handlePrint(c, opts)
 	})
+	registerInspectorRoutes(router, opts)
 
 	return router
 }
@@ -121,10 +160,12 @@ func (s *Server) Start() error {
 
 	normalized, err := config.Normalize(s.cfg)
 	if err != nil {
+		s.previews.Configure(config.PreviewConfig{}, false)
 		s.lastErr = err
 		return err
 	}
 	s.cfg = normalized
+	s.previews.Configure(normalized.Preview, normalized.DestinationType == config.DestinationVirtual)
 
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(s.cfg.HTTPPort))
 	listener, err := net.Listen("tcp", address)
@@ -135,29 +176,38 @@ func (s *Server) Start() error {
 
 	srv := &http.Server{
 		Addr:    address,
-		Handler: NewRouter(Options{Config: s.cfg, Logger: s.logger}),
+		Handler: NewRouter(Options{Config: s.cfg, Logger: s.logger, CaptureStore: s.captures, previews: s.previews}),
 	}
+	ready := make(chan struct{})
+	serveListener := &readyListener{Listener: listener, ready: ready}
 
 	s.listener = listener
 	s.httpServer = srv
 	s.lastErr = nil
 
 	go func() {
-		err := srv.Serve(listener)
+		err := srv.Serve(serveListener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.mu.Lock()
-			s.lastErr = err
-			s.httpServer = nil
-			s.listener = nil
+			if s.httpServer == srv {
+				s.lastErr = err
+				s.httpServer = nil
+				s.listener = nil
+			}
 			s.mu.Unlock()
 		}
 	}()
+	<-ready
 
 	return nil
 }
 
 // Stop gracefully shuts down the HTTP listener.
 func (s *Server) Stop(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	s.mu.Lock()
 	srv := s.httpServer
 	s.httpServer = nil
@@ -167,10 +217,18 @@ func (s *Server) Stop(ctx context.Context) error {
 	if srv == nil {
 		return nil
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	return srv.Shutdown(ctx)
+}
+
+type readyListener struct {
+	net.Listener
+	ready chan struct{}
+	once  sync.Once
+}
+
+func (l *readyListener) Accept() (net.Conn, error) {
+	l.once.Do(func() { close(l.ready) })
+	return l.Listener.Accept()
 }
 
 // Restart replaces the server configuration and starts a fresh listener.
@@ -187,6 +245,16 @@ func (s *Server) Restart(cfg config.Config) error {
 	s.mu.Unlock()
 
 	return s.Start()
+}
+
+// Close stops the listener and releases preview workers and session captures.
+func (s *Server) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err := s.Stop(ctx)
+	s.previews.Close()
+	s.captures.Close()
+	return err
 }
 
 // Status reports whether the listener is running and where it should be found.
@@ -207,14 +275,13 @@ func (s *Server) Status() Status {
 	return status
 }
 
-func normalizeOptions(opts Options) Options {
+// normalizeOptions validates routing settings before creating any transport.
+func normalizeOptions(opts Options) (Options, error) {
 	normalized, err := config.Normalize(opts.Config)
-	if err == nil {
-		opts.Config = normalized
+	if err != nil {
+		return opts, err
 	}
-	if opts.Config.DefaultPrinterPort == 0 {
-		opts.Config.DefaultPrinterPort = config.DefaultPrinterPort
-	}
+	opts.Config = normalized
 	if opts.ConnectTimeout <= 0 {
 		opts.ConnectTimeout = DefaultConnectTimeout
 	}
@@ -225,9 +292,25 @@ func normalizeOptions(opts Options) Options {
 		dialer := &net.Dialer{}
 		opts.DialContext = dialer.DialContext
 	}
-	return opts
+	if opts.CaptureStore == nil {
+		opts.CaptureStore = capture.NewStore()
+	}
+	if opts.Config.DestinationType == config.DestinationVirtual {
+		opts.Destination = opts.CaptureStore
+		return opts, nil
+	}
+	if opts.Destination == nil {
+		opts.Destination = tcpDestination{
+			dial:           opts.DialContext,
+			connectTimeout: opts.ConnectTimeout,
+			writeTimeout:   opts.WriteTimeout,
+		}
+	}
+	return opts, nil
 }
 
+// handleStatus probes only Physical targets; Virtual readiness is local and
+// independent of preview state. Supplied addresses remain response metadata.
 func handleStatus(c *gin.Context, opts Options) {
 	host := strings.TrimSpace(c.Query("host"))
 	port, err := parsePort(c.Query("port"), opts.Config.DefaultPrinterPort)
@@ -236,7 +319,7 @@ func handleStatus(c *gin.Context, opts Options) {
 		target = net.JoinHostPort(host, strconv.Itoa(port))
 	}
 
-	if host == "" {
+	if host == "" && opts.Config.DestinationType == config.DestinationPhysical {
 		record(opts, "/status", "", "error", "missing host query parameter")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "missing required query parameter 'host'"})
 		return
@@ -247,31 +330,54 @@ func handleStatus(c *gin.Context, opts Options) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), opts.ConnectTimeout)
-	defer cancel()
-
-	conn, err := opts.DialContext(ctx, "tcp", target)
-	if err != nil {
-		record(opts, "/status", target, "unreachable", err.Error())
-		c.JSON(http.StatusOK, gin.H{"reachable": false, "host": host, "port": port})
-		return
+	response := gin.H{"reachable": true, "host": host, "port": port}
+	if opts.Config.DestinationType == config.DestinationVirtual {
+		response["destination"] = config.DestinationVirtual
 	}
-	_ = conn.Close()
-
-	record(opts, "/status", target, "reachable", "")
-	c.JSON(http.StatusOK, gin.H{"reachable": true, "host": host, "port": port})
+	if err := opts.Destination.Check(c.Request.Context(), target); err != nil {
+		record(opts, "/status", target, "unreachable", err.Error())
+		response["reachable"] = false
+	} else {
+		record(opts, "/status", target, "reachable", "")
+	}
+	c.JSON(http.StatusOK, response)
 }
 
+// handlePrint validates against the router's fixed destination and acknowledges
+// either an exact-byte socket write or a completed capture, never a preview.
 func handlePrint(c *gin.Context, opts Options) {
 	var req PrintJobRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Only bounded destinations opt into request limits; physical integrations
+	// keep their existing behavior. Limit reads before the JSON decoder allocates.
+	limited, bounded := opts.Destination.(interface{ RequestLimit() int64 })
+	if bounded {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limited.RequestLimit())
+	}
+	virtual := opts.Config.DestinationType == config.DestinationVirtual
+	var err error
+	if virtual {
+		err = decodeVirtualPrint(c.Request.Body, &req)
+	} else {
+		err = c.ShouldBindJSON(&req)
+	}
+	if err == nil && bounded && !virtual {
+		// Account for trailing bytes too, including bodies with unknown length.
+		_, err = io.Copy(io.Discard, c.Request.Body)
+	}
+	if err != nil {
+		var sizeErr *http.MaxBytesError
+		if errors.As(err, &sizeErr) {
+			record(opts, "/print", "", "error", "print request exceeds size limit")
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"message": "print request exceeds size limit"})
+			return
+		}
 		record(opts, "/print", "", "error", fmt.Sprintf("error parsing JSON: %v", err))
 		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("error parsing JSON: %v", err)})
 		return
 	}
 
 	req.PrinterHostname = strings.TrimSpace(req.PrinterHostname)
-	if req.PrinterHostname == "" {
+	if req.PrinterHostname == "" && !virtual {
 		record(opts, "/print", "", "error", "missing required field 'printerHostname'")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "missing required field 'printerHostname'"})
 		return
@@ -293,32 +399,92 @@ func handlePrint(c *gin.Context, opts Options) {
 	}
 
 	target := net.JoinHostPort(req.PrinterHostname, strconv.Itoa(port))
-	ctx, cancel := context.WithTimeout(c.Request.Context(), opts.ConnectTimeout)
-	defer cancel()
-
-	conn, err := opts.DialContext(ctx, "tcp", target)
+	response := gin.H{"message": "OK"}
+	if virtual {
+		var meta capture.Metadata
+		meta, err = opts.CaptureStore.Capture(c.Request.Context(), target, []byte(req.Text))
+		if err == nil {
+			detectedType := detectZPL([]byte(req.Text))
+			previewState := "disabled"
+			renderEnabled := opts.previews.Enabled()
+			if renderEnabled && detectedType != "zpl" {
+				previewState = "unsupported"
+			}
+			if classifyErr := opts.CaptureStore.Classify(meta.ID, detectedType, previewState); classifyErr == nil &&
+				renderEnabled && detectedType == "zpl" {
+				_ = opts.previews.Schedule(meta.ID, 0)
+			}
+		}
+		response["destination"] = config.DestinationVirtual
+		response["jobId"] = meta.ID
+	} else {
+		err = opts.Destination.Send(c.Request.Context(), target, []byte(req.Text))
+	}
 	if err != nil {
-		record(opts, "/print", target, "error", fmt.Sprintf("error connecting to printer: %v", err))
-		c.JSON(http.StatusBadGateway, gin.H{"message": fmt.Sprintf("error connecting to printer: %v", err)})
-		return
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	if err := conn.SetWriteDeadline(time.Now().Add(opts.WriteTimeout)); err != nil {
-		record(opts, "/print", target, "error", fmt.Sprintf("error setting write deadline: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("error sending data to printer: %v", err)})
-		return
-	}
-	if _, err := conn.Write([]byte(req.Text)); err != nil {
-		record(opts, "/print", target, "error", fmt.Sprintf("error sending data to printer: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("error sending data to printer: %v", err)})
+		status := http.StatusInternalServerError
+		message := fmt.Sprintf("error sending data to destination: %v", err)
+		if errors.Is(err, capture.ErrTooLarge) {
+			status = http.StatusRequestEntityTooLarge
+		} else if virtual || errors.Is(err, capture.ErrClosed) {
+			status = http.StatusServiceUnavailable
+		}
+		var transportErr *tcpError
+		if errors.As(err, &transportErr) {
+			message = transportErr.Error()
+			switch transportErr.operation {
+			case "connecting to printer":
+				status = http.StatusBadGateway
+			case "setting write deadline":
+				message = fmt.Sprintf("error sending data to printer: %v", transportErr.err)
+			}
+		}
+		record(opts, "/print", target, "error", err.Error())
+		c.JSON(status, gin.H{"message": message})
 		return
 	}
 
 	record(opts, "/print", target, "success", "OK")
-	c.JSON(http.StatusOK, gin.H{"message": "OK"})
+	c.JSON(http.StatusOK, response)
+}
+
+// decodeVirtualPrint accepts one JSON object and validates supplied field types.
+// Reading through EOF rejects trailing documents and enforces the wire limit,
+// including bytes buffered by the decoder. Unknown fields remain compatible
+// with existing clients; they cannot override the configured destination.
+func decodeVirtualPrint(body io.Reader, req *PrintJobRequest) error {
+	decoder := json.NewDecoder(body)
+	var fields map[string]json.RawMessage
+	if err := decoder.Decode(&fields); err != nil {
+		return err
+	}
+	if fields == nil {
+		return errors.New("print request must be a JSON object")
+	}
+	for _, field := range []struct {
+		name  string
+		value any
+	}{
+		{"printerHostname", &req.PrinterHostname},
+		{"printerPort", &req.PrinterPort},
+		{"text", &req.Text},
+	} {
+		if raw, ok := fields[field.name]; ok {
+			if string(raw) == "null" {
+				return fmt.Errorf("field %q must not be null", field.name)
+			}
+			if err := json.Unmarshal(raw, field.value); err != nil {
+				return err
+			}
+		}
+	}
+	var extra json.RawMessage
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err != nil {
+			return err
+		}
+		return errors.New("print request must contain a single JSON object")
+	}
+	return nil
 }
 
 func parsePort(raw string, defaultPort int) (int, error) {

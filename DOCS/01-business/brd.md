@@ -38,6 +38,15 @@ This is a portfolio/showcase deliverable, not a funded commercial product. Scope
 
 **BR-8 — Low support burden.** Given this is maintained by a single person alongside other work, the current beta must favor features that reduce support requests (clear errors, visible logs, install-workaround docs) over features that expand scope (multi-printer profiles, format conversion, auto-update).
 
+Approved extension, implemented through VM-8 with VM-9 automated integration
+coverage: **BR-9 — Hardware-free developer testing.** Developers can route
+all print jobs to a Virtual destination and
+inspect ZPL/raw text in a local browser dashboard. Capture works offline;
+external ZPL previews are optional and explicitly enabled. Existing physical
+integrations remain compatible. Automated integration is verified; native
+tray/browser and installer smoke checks remain release follow-up. See the
+[E7 completion record](../08-backlog/virtual-mode-sprint.md).
+
 ## 5. Out of scope for the current beta
 
 - Commercial licensing, paid tiers, or support SLAs

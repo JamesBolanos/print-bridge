@@ -4,6 +4,8 @@ package desktopapp
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -27,18 +29,20 @@ import (
 const disclaimer = "print-bridge is an independent project, not affiliated with or endorsed by any printer manufacturer."
 
 type application struct {
-	app          fyne.App
-	window       fyne.Window
-	cfgPath      string
-	cfg          config.Config
-	server       *server.Server
-	logger       *logging.Logger
-	statusIcon   *widget.Icon
-	statusLabel  *widget.Label
-	infoLabel    *widget.Label
-	messageLabel *widget.Label
-	closeNotice  bool
-	stopUpdates  chan struct{}
+	app             fyne.App
+	window          fyne.Window
+	cfgPath         string
+	cfg             config.Config
+	server          *server.Server
+	logger          *logging.Logger
+	openURL         func(*url.URL) error
+	statusIcon      *widget.Icon
+	statusLabel     *widget.Label
+	infoLabel       *widget.Label
+	messageLabel    *widget.Label
+	closeNotice     bool
+	stopUpdates     chan struct{}
+	recoveryMessage string
 }
 
 // Run starts the desktop app, local HTTP listener, tray integration, and UI loop.
@@ -72,6 +76,14 @@ func Run() error {
 	fyneApp.SetIcon(appIcon)
 
 	bridgeServer := server.New(cfg, logger)
+	defer func() {
+		if err := bridgeServer.Close(); err != nil {
+			logger.Record(activity.Entry{
+				Timestamp: time.Now(), Endpoint: "shutdown", Outcome: "error",
+				Detail: "server shutdown failed: " + err.Error(),
+			})
+		}
+	}()
 	ui := &application{
 		app:         fyneApp,
 		cfgPath:     cfgPath,
@@ -79,14 +91,22 @@ func Run() error {
 		server:      bridgeServer,
 		logger:      logger,
 		stopUpdates: make(chan struct{}),
+		openURL:     fyneApp.OpenURL,
+	}
+	if loadResult.RecoveryRequired {
+		ui.recoveryMessage = loadResult.Warning
 	}
 
 	ui.window = fyneApp.NewWindow(config.AppDisplayName)
-	ui.window.Resize(fyne.NewSize(680, 330))
+	ui.window.Resize(fyne.NewSize(840, 390))
 	ui.window.SetContent(ui.mainContent())
 
 	if err := bridgeServer.Start(); err != nil {
-		ui.setMessage("Listener failed to start: " + err.Error())
+		if ui.recoveryMessage != "" {
+			ui.setMessage(ui.recoveryMessage)
+		} else {
+			ui.setMessage("Listener failed to start: " + err.Error())
+		}
 	} else {
 		ui.setMessage("Listening on " + bridgeServer.Status().Address)
 	}
@@ -120,11 +140,12 @@ func (a *application) mainContent() fyne.CanvasObject {
 	disclaimerLabel.Wrapping = fyne.TextWrapWord
 
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), a.showSettings)
+	inspectorButton := widget.NewButtonWithIcon("Open Inspector", theme.VisibilityIcon(), a.openInspector)
 	detailsButton := widget.NewButtonWithIcon("Details", theme.InfoIcon(), a.showDetails)
 	helpButton := widget.NewButtonWithIcon("Help", theme.HelpIcon(), a.showHelp)
 	logsButton := widget.NewButtonWithIcon("View Logs", theme.DocumentIcon(), a.showLogs)
 	quitButton := widget.NewButtonWithIcon("Quit", theme.CancelIcon(), a.quit)
-	actions := container.NewHBox(settingsButton, detailsButton, helpButton, logsButton, layout.NewSpacer(), quitButton)
+	actions := container.NewHBox(settingsButton, inspectorButton, detailsButton, helpButton, logsButton, layout.NewSpacer(), quitButton)
 
 	content := container.NewVBox(heading, statusRow, a.infoLabel, a.messageLabel, disclaimerLabel, actions)
 
@@ -171,8 +192,10 @@ func (a *application) updateTrayMenu() {
 		}),
 		fyne.NewMenuItem("Details", a.showDetails),
 		fyne.NewMenuItem("Help", a.showHelp),
+		fyne.NewMenuItem("Open Inspector", a.openInspector),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem(statusText, nil),
+		fyne.NewMenuItem("Destination: "+destinationLabel(a.cfg.DestinationType), nil),
 		fyne.NewMenuItem("Printer port: "+strconv.Itoa(a.cfg.DefaultPrinterPort), nil),
 		fyne.NewMenuItem("Allowed origins: "+strconv.Itoa(len(a.cfg.AllowedOrigins)), nil),
 		fyne.NewMenuItemSeparator(),
@@ -205,7 +228,8 @@ func (a *application) updateInfo() {
 	}
 
 	a.infoLabel.SetText(fmt.Sprintf(
-		"Default printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
+		"Destination: %s\nDefault printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
+		destinationLabel(a.cfg.DestinationType),
 		a.cfg.DefaultPrinterPort,
 		displayValue(a.cfg.DefaultPrinterAddress, "Not set"),
 		displayOriginsSummary(a.cfg.AllowedOrigins),
@@ -223,7 +247,10 @@ func (a *application) setMessage(message string) {
 
 func (a *application) showSettings() {
 	settingsWindow := a.app.NewWindow("Settings")
-	settingsWindow.Resize(fyne.NewSize(560, 500))
+	settingsWindow.Resize(fyne.NewSize(620, 720))
+
+	destinationSelect := widget.NewSelect([]string{"Physical", "Virtual (capture only)"}, nil)
+	destinationSelect.SetSelected(destinationLabel(a.cfg.DestinationType))
 
 	httpPortEntry := widget.NewEntry()
 	httpPortEntry.SetText(strconv.Itoa(a.cfg.HTTPPort))
@@ -240,10 +267,26 @@ func (a *application) showSettings() {
 	originsEntry.SetMinRowsVisible(5)
 	originsEntry.PlaceHolder = "Add required web app origins, one per line"
 
+	labelaryCheck := widget.NewCheck("Enable Labelary previews", nil)
+	labelaryCheck.SetChecked(a.cfg.Preview.LabelaryEnabled)
+	labelWidthEntry := widget.NewEntry()
+	labelWidthEntry.SetText(strconv.FormatFloat(a.cfg.Preview.LabelWidthInches, 'f', -1, 64))
+	labelHeightEntry := widget.NewEntry()
+	labelHeightEntry.SetText(strconv.FormatFloat(a.cfg.Preview.LabelHeightInches, 'f', -1, 64))
+	densitySelect := widget.NewSelect([]string{"6", "8", "12", "24"}, nil)
+	densitySelect.SetSelected(strconv.Itoa(a.cfg.Preview.PrintDensityDpmm))
+	previewDisclosure := widget.NewLabel("When enabled, complete label contents are sent over HTTPS to Labelary for rendering. Previews are optional; printing and capture do not depend on this service.")
+	previewDisclosure.Wrapping = fyne.TextWrapWord
+
 	errorLabel := widget.NewLabel("")
 	errorLabel.Wrapping = fyne.TextWrapWord
 
 	form := widget.NewForm(
+		settingsFormItem(
+			"Destination",
+			destinationSelect,
+			"Physical sends print jobs to the requested network printer. Virtual captures all jobs locally and never sends them to a printer.",
+		),
 		settingsFormItem(
 			"HTTP port",
 			httpPortEntry,
@@ -264,10 +307,23 @@ func (a *application) showSettings() {
 			originsEntry,
 			"Website addresses allowed to use print-bridge from a browser. One per line, no page path.",
 		),
+		settingsFormItem("Optional Labelary rendering", container.NewVBox(labelaryCheck, previewDisclosure),
+			"Rendering is off by default, works only in Virtual mode, and shares job contents with the Labelary service when enabled."),
+		settingsFormItem("Label width (inches)", labelWidthEntry, "Preview label width from greater than 0 through 15 inches."),
+		settingsFormItem("Label height (inches)", labelHeightEntry, "Preview label height from greater than 0 through 15 inches."),
+		settingsFormItem("Print density (dpmm)", densitySelect, "Labelary density in dots per millimeter: 6, 8, 12, or 24."),
 	)
 
 	saveButton := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
-		nextCfg, err := settingsConfig(httpPortEntry.Text, printerPortEntry.Text, printerAddressEntry.Text, originsEntry.Text)
+		if a.recoveryMessage != "" {
+			errorLabel.SetText(a.recoveryMessage)
+			return
+		}
+		nextCfg, err := settingsConfig(
+			a.cfg, httpPortEntry.Text, printerPortEntry.Text, printerAddressEntry.Text,
+			originsEntry.Text, destinationSelect.Selected, labelaryCheck.Checked,
+			labelWidthEntry.Text, labelHeightEntry.Text, densitySelect.Selected,
+		)
 		if err != nil {
 			errorLabel.SetText(err.Error())
 			return
@@ -291,6 +347,10 @@ func (a *application) showSettings() {
 		a.updateStatus()
 		settingsWindow.Close()
 	})
+	if a.recoveryMessage != "" {
+		errorLabel.SetText(a.recoveryMessage)
+		saveButton.Disable()
+	}
 
 	cancelButton := widget.NewButtonWithIcon("Cancel", theme.CancelIcon(), func() {
 		settingsWindow.Close()
@@ -341,6 +401,12 @@ func (a *application) detailsText() string {
 		"  Address: " + status.Address,
 		"  HTTP port: " + strconv.Itoa(a.cfg.HTTPPort),
 		"  Last listener error: " + statusError,
+		"  Destination: " + destinationLabel(a.cfg.DestinationType),
+		"",
+		"Preview",
+		"  Labelary enabled: " + strconv.FormatBool(a.cfg.Preview.LabelaryEnabled),
+		"  Label size: " + strconv.FormatFloat(a.cfg.Preview.LabelWidthInches, 'f', -1, 64) + " x " + strconv.FormatFloat(a.cfg.Preview.LabelHeightInches, 'f', -1, 64) + " inches",
+		"  Print density: " + strconv.Itoa(a.cfg.Preview.PrintDensityDpmm) + " dpmm",
 		"",
 		"Printer Defaults",
 		"  Default printer address: " + defaultPrinterAddress,
@@ -408,6 +474,11 @@ func (a *application) helpText() string {
 		"",
 		"## Check These Values",
 		"- print-bridge address: `http://" + listener + "`",
+		"- Destination: `" + destinationLabel(a.cfg.DestinationType) + "`",
+		"- In Virtual mode, jobs are captured for inspection and are not sent to a physical printer.",
+		"- Labelary previews are optional and share label contents with an external service when enabled.",
+		"- Capture and inspection work offline; previews need an internet connection and do not guarantee physical printer fidelity.",
+		"- Virtual job history is temporary and is cleared when print-bridge quits.",
 		"- Default printer address: `" + displayValue(a.cfg.DefaultPrinterAddress, "Not set") + "`",
 		"- Default printer port: `" + strconv.Itoa(a.cfg.DefaultPrinterPort) + "`",
 		"- Allowed origins: " + displayOriginsForHelp(a.cfg.AllowedOrigins),
@@ -431,7 +502,60 @@ func (a *application) listenerAddress() string {
 	return "127.0.0.1:" + strconv.Itoa(a.cfg.HTTPPort)
 }
 
-func settingsConfig(httpPortText string, printerPortText string, printerAddress string, originsText string) (config.Config, error) {
+func (a *application) openInspector() {
+	if err := launchInspector(a.cfg.HTTPPort, a.openURL); err != nil {
+		message := "Could not open the inspector: " + err.Error()
+		a.setMessage(message)
+		a.app.SendNotification(&fyne.Notification{Title: "Unable to open inspector", Content: err.Error()})
+		a.window.Show()
+		return
+	}
+	a.setMessage("Opened inspector at " + inspectorAddress(a.cfg.HTTPPort))
+}
+
+// launchInspector opens the local dashboard through the system browser.
+func launchInspector(port int, openURL func(*url.URL) error) error {
+	if openURL == nil {
+		return fmt.Errorf("system browser is unavailable")
+	}
+	target, err := inspectorURL(port)
+	if err != nil {
+		return err
+	}
+	if err := openURL(target); err != nil {
+		return fmt.Errorf("system browser could not open %s: %w", target, err)
+	}
+	return nil
+}
+
+func inspectorURL(port int) (*url.URL, error) {
+	if port < 1024 || port > 65535 {
+		return nil, fmt.Errorf("inspector port is outside the valid range")
+	}
+	return url.Parse("http://" + inspectorAddress(port) + "/inspector/")
+}
+
+func inspectorAddress(port int) string {
+	return net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+}
+
+// settingsConfig applies every setting exposed by the desktop form. Recovery
+// configs stay invalid, preventing an ordinary Save from choosing Physical.
+func settingsConfig(
+	base config.Config,
+	httpPortText string,
+	printerPortText string,
+	printerAddress string,
+	originsText string,
+	destination string,
+	labelaryEnabled bool,
+	labelWidthText string,
+	labelHeightText string,
+	densityText string,
+) (config.Config, error) {
+	if _, err := config.Normalize(base); err != nil {
+		return config.Config{}, err
+	}
 	httpPort, err := strconv.Atoi(strings.TrimSpace(httpPortText))
 	if err != nil {
 		return config.Config{}, fmt.Errorf("HTTP port must be a number")
@@ -440,16 +564,55 @@ func settingsConfig(httpPortText string, printerPortText string, printerAddress 
 	if err != nil {
 		return config.Config{}, fmt.Errorf("default printer port must be a number")
 	}
-
-	origins := splitOrigins(originsText)
-	cfg := config.Config{
-		HTTPPort:              httpPort,
-		DefaultPrinterPort:    printerPort,
-		DefaultPrinterAddress: strings.TrimSpace(printerAddress),
-		AllowedOrigins:        origins,
+	destinationType, err := destinationTypeFromLabel(destination)
+	if err != nil {
+		return config.Config{}, err
+	}
+	labelWidth, err := strconv.ParseFloat(strings.TrimSpace(labelWidthText), 64)
+	if err != nil {
+		return config.Config{}, fmt.Errorf("label width must be a number")
+	}
+	labelHeight, err := strconv.ParseFloat(strings.TrimSpace(labelHeightText), 64)
+	if err != nil {
+		return config.Config{}, fmt.Errorf("label height must be a number")
+	}
+	density, err := strconv.Atoi(strings.TrimSpace(densityText))
+	if err != nil {
+		return config.Config{}, fmt.Errorf("print density must be 6, 8, 12, or 24")
 	}
 
-	return config.Normalize(cfg)
+	base.HTTPPort = httpPort
+	base.DefaultPrinterPort = printerPort
+	base.DefaultPrinterAddress = strings.TrimSpace(printerAddress)
+	base.AllowedOrigins = splitOrigins(originsText)
+	base.DestinationType = destinationType
+	base.Preview = config.PreviewConfig{
+		LabelaryEnabled: labelaryEnabled, LabelWidthInches: labelWidth,
+		LabelHeightInches: labelHeight, PrintDensityDpmm: density,
+	}
+	return config.Normalize(base)
+}
+
+func destinationLabel(destination string) string {
+	switch destination {
+	case config.DestinationVirtual:
+		return "Virtual (capture only)"
+	case config.DestinationPhysical:
+		return "Physical"
+	default:
+		return "Unavailable (repair required)"
+	}
+}
+
+func destinationTypeFromLabel(label string) (string, error) {
+	switch label {
+	case "Physical":
+		return config.DestinationPhysical, nil
+	case "Virtual (capture only)":
+		return config.DestinationVirtual, nil
+	default:
+		return "", fmt.Errorf("select a destination")
+	}
 }
 
 func splitOrigins(text string) []string {

@@ -1,28 +1,28 @@
 openapi: 3.0.3
 info:
   title: print-bridge Local API
-  version: "1.0.0"
+  version: "1.2.0"
   description: >
-    Local HTTP API exposed by print-bridge on the user's machine. Called by
-    browser-based web apps to send raw print data to a network-connected
-    printer, and to check printer/agent status. This spec is the
-    authoritative source of truth for request/response shapes — prose
-    documentation elsewhere in the repo is explanatory, not authoritative.
-    See 03-architecture/security-model.md for the CORS-only access model and
-    02-process/bpmn-print-job-flow.md for the end-to-end flow.
+    Local HTTP API for raw physical printing or session-only virtual capture.
+    The saved destination applies globally; requests cannot override it.
+    Virtual mode never connects to a printer or falls back to physical output.
+    This spec is authoritative for request/response shapes. See
+    03-architecture/security-model.md for the integration CORS access model.
+    Inspector APIs use a separate same-origin policy from the integration CORS
+    allow-list. The dashboard is bundled and offline; optional Labelary
+    rendering is disabled by default and available only in Virtual mode.
 servers:
   - url: http://localhost:{port}
-    description: Local print-bridge instance. Port is user-configured (see 06-config/config-schema.md); default shown here.
+    description: Local instance, bound to 127.0.0.1. Port is user-configured.
     variables:
       port:
         default: "8080"
-
 paths:
   /ping:
     get:
       operationId: ping
       summary: Liveness check
-      description: Confirms the print-bridge agent is running and reachable. Does not check printer connectivity — use /status for that.
+      description: Confirms the listener is running, independent of printer or capture readiness.
       responses:
         "200":
           description: Agent is running.
@@ -30,109 +30,441 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PingResponse"
-              example:
-                message: pong
-
+              example: { message: pong }
   /status:
     get:
       operationId: getPrinterStatus
-      summary: Check whether a specific printer is reachable
+      summary: Check physical printer or virtual capture readiness
       description: >
-        Attempts a TCP connect (probe only, no data written) to the given
-        host:port within the connect timeout defined in
-        03-architecture/architecture-overview.md. Returns reachable:false on
-        timeout or connection refusal rather than an error response — an
-        unreachable printer is an expected, non-exceptional outcome for this
-        endpoint.
+        Physical mode requires host and probes host:port using a TCP connect
+        with a 3-second default timeout, writing no data. Virtual mode permits
+        omitted host and checks only the capture store, with no network probe.
+        Virtual host/port fields are descriptive metadata, not printer reachability.
+        Both modes return HTTP 200 with reachable:false when unavailable.
+        Preview settings, failures, or queue pressure do not affect capture readiness.
       parameters:
         - name: host
           in: query
-          required: true
+          required: false
           schema:
             type: string
+          description: Required and non-empty in Physical mode; optional metadata in Virtual mode. Surrounding whitespace is trimmed.
           example: "192.168.1.100"
-          description: Printer IP address or hostname.
         - name: port
           in: query
           required: false
           schema:
             type: integer
-            default: 9100
+            minimum: 1
+            maximum: 65535
+          description: Omitted/blank uses defaultPrinterPort (9100 on new installs). Explicit zero is invalid for this query in either mode.
           example: 9100
-          description: Printer TCP port. Defaults to 9100 (standard raw/JetDirect printing port) if omitted.
       responses:
         "200":
-          description: Probe completed (reachable or not — check the reachable field).
+          description: Readiness check completed; inspect reachable and the optional destination discriminator.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/StatusResponse"
+                  - $ref: "#/components/schemas/VirtualStatusResponse"
               examples:
-                reachable:
+                physicalReachable:
                   value: { reachable: true, host: "192.168.1.100", port: 9100 }
-                unreachable:
+                physicalUnreachable:
                   value: { reachable: false, host: "192.168.1.100", port: 9100 }
+                virtualReady:
+                  value: { reachable: true, destination: virtual, host: "", port: 9100 }
+                virtualUnavailable:
+                  value: { reachable: false, destination: virtual, host: "", port: 9100 }
         "400":
-          description: Missing or invalid host/port parameter.
+          description: Missing physical host or invalid port.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-
   /print:
     post:
       operationId: sendPrintJob
-      summary: Send a raw print job to a printer
+      summary: Send raw text to the configured destination
       description: >
-        Opens a TCP connection to printerHostname:printerPort and writes the
-        text field to it as-is (raw passthrough — no format conversion; see
-        ADR-005 in 03-architecture/decisions.md). Connection and write are
-        each bounded by the timeouts defined in
-        03-architecture/architecture-overview.md.
+        Physical mode writes decoded text bytes to printerHostname:printerPort,
+        with default connect/write timeouts of 3/5 seconds. Virtual mode copies
+        the same bytes into bounded session memory without format inspection or
+        network operations, then returns an opaque job ID. Successful capture
+        is independent of preview rendering. No binary, PDF, base64, or multipart
+        submission is provided. Virtual limits are 8 MiB per HTTP body, 1 MiB
+        per decoded payload, and 1024 bytes for the normalized host:port metadata.
+        Oldest jobs are evicted at 100 jobs or 32 MiB of stored payload, target,
+        and preview bytes. Physical request limits are unchanged.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/PrintJobRequest"
-            example:
-              printerHostname: "192.168.1.100"
-              printerPort: 9100
-              text: "^XA^FO50,50^ADN,36,20^FDTest Label^FS^XZ"
+            examples:
+              existingClient:
+                value:
+                  printerHostname: "192.168.1.100"
+                  printerPort: 9100
+                  text: "^XA^FO50,50^ADN,36,20^FDTest Label^FS^XZ"
+              virtualOnly:
+                value: { text: "^XA^FDTest Label^FS^XZ" }
       responses:
         "200":
-          description: Data was successfully written to the printer socket. Does not guarantee the physical label printed — only that the bridge delivered the data.
+          description: Physical socket write completed (not proof of printing), or virtual capture completed (not proof of rendering). IDs may later be evicted and do not persist across app exit.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PrintJobResponse"
-              example:
-                message: "OK"
+                oneOf:
+                  - $ref: "#/components/schemas/PrintJobResponse"
+                  - $ref: "#/components/schemas/VirtualPrintJobResponse"
+              examples:
+                physical:
+                  value: { message: OK }
+                virtual:
+                  value: { message: OK, destination: virtual, jobId: "opaque-session-job-id" }
         "400":
-          description: Malformed request body (invalid JSON or missing required fields).
+          description: Invalid JSON, field types, missing/empty text, invalid port, or missing physical hostname. Virtual mode rejects null known fields and trailing JSON/data.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: "error parsing JSON: missing required field 'printerHostname'"
+        "413":
+          description: Virtual request body, decoded payload, or target metadata exceeds its limit. No job is captured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Virtual capture unavailable. No physical fallback occurs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "502":
-          description: Could not establish a TCP connection to the printer within the connect timeout.
+          description: Physical printer connection failed or timed out.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: "error connecting to printer: dial tcp 192.168.1.100:9100: i/o timeout"
         "500":
-          description: Connected, but writing data to the printer failed or timed out.
+          description: Physical write or write-deadline setup failed.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: "error sending data to printer: write timeout after 5s"
-
+  /inspector/:
+    get:
+      operationId: getInspectorShell
+      summary: Open the bundled local inspector shell
+      description: >
+        Serves the bundled offline dashboard. The canonical origin is
+        http://127.0.0.1:{port}; the Host must match the
+        active loopback address and port. A supplied Origin must match exactly.
+        Missing Origin is accepted for reads unless Fetch Metadata reports a
+        cross-origin request. All inspector responses are no-store and cannot
+        be framed by another origin.
+      responses:
+        "200":
+          description: Bundled HTML shell.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            X-Frame-Options:
+              schema: { type: string, enum: [DENY] }
+          content:
+            text/html:
+              schema: { type: string }
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /inspector/app.js:
+    get:
+      operationId: getInspectorScript
+      summary: Retrieve the bundled inspector script
+      responses:
+        "200":
+          description: Local dashboard JavaScript.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            Content-Security-Policy:
+              schema: { type: string }
+          content:
+            text/javascript:
+              schema: { type: string }
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /inspector/styles.css:
+    get:
+      operationId: getInspectorStyles
+      summary: Retrieve the bundled inspector stylesheet
+      responses:
+        "200":
+          description: Local dashboard CSS.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            Content-Security-Policy:
+              schema: { type: string }
+          content:
+            text/css:
+              schema: { type: string }
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/inspector/jobs:
+    get:
+      operationId: listInspectorJobs
+      summary: List retained job metadata
+      description: >
+        Returns newest-first metadata for at most 100 session jobs. Payloads
+        and previews are available only through their dedicated routes. The
+        response includes previewEnabled to indicate whether external rendering
+        is currently enabled by saved settings and Virtual mode. Newly captured
+        likely-ZPL jobs are queued automatically only when this is true; older
+        jobs require an explicit POST action. Rendering failures do not affect
+        capture success.
+        inspector access policy is separate from integration CORS: Host must
+        be 127.0.0.1:{port}; a supplied Origin must equal the canonical local
+        origin. Missing Origin is allowed for reads, but supplied null/foreign
+        Origin and non-same-origin Fetch Metadata are rejected. Successful and
+        rejected inspector responses include Cache-Control: no-store.
+      responses:
+        "200":
+          description: Bounded metadata list.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            X-Content-Type-Options:
+              schema: { type: string, enum: [nosniff] }
+            X-Frame-Options:
+              schema: { type: string, enum: [DENY] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectorJobsResponse"
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: clearInspectorJobs
+      summary: Clear all retained jobs
+      description: >
+        Clears session history and cancels/invalidate pending preview work.
+        Requires an exact canonical Origin; null or missing Origin is rejected.
+        If Fetch Metadata is supplied, Sec-Fetch-Site must be same-origin.
+      responses:
+        "200":
+          description: Jobs cleared.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearInspectorJobsResponse"
+        "403":
+          description: Mutation did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Capture store is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/inspector/jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    get:
+      operationId: getInspectorJob
+      summary: Get one job's metadata and resource links
+      description: Does not return the raw payload or image bytes.
+      responses:
+        "200":
+          description: Retained job metadata and download/preview URLs.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectorJobResponse"
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job is missing, cleared, or evicted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/inspector/jobs/{jobId}/download:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    get:
+      operationId: downloadInspectorJob
+      summary: Download the original captured payload
+      description: >
+        Returns the exact decoded-text bytes as an application/octet-stream
+        attachment. Payloads are at most 1 MiB. The response sets no-store,
+        nosniff, and Content-Disposition: attachment.
+      responses:
+        "200":
+          description: Original captured bytes.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            X-Content-Type-Options:
+              schema: { type: string, enum: [nosniff] }
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job is missing, cleared, or evicted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/inspector/jobs/{jobId}/preview:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    get:
+      operationId: getInspectorPreview
+      summary: Retrieve an available PNG preview
+      description: >
+        This read-only route does not start rendering. Cached previews are at
+        most 4 MiB. This read-only route never starts rendering.
+      responses:
+        "200":
+          description: Cached preview image.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+            X-Content-Type-Options:
+              schema: { type: string, enum: [nosniff] }
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Host, Origin, or Fetch Metadata did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job is missing, cleared, or evicted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No completed preview is available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewUnavailableResponse"
+    post:
+      operationId: renderInspectorPreview
+      summary: Queue a ZPL preview render or retry
+      description: >
+        Starts asynchronous HTTPS rendering through the fixed Labelary endpoint
+        only when rendering is enabled and the retained job is likely ZPL.
+        Captured bytes are sent as the request body and are never placed in a
+        URL. The settings are snapshotted for this attempt. Requires the exact
+        canonical Origin and same-origin Fetch Metadata when supplied. Older
+        captures are rendered only after this explicit action.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewRenderRequest"
+      responses:
+        "202":
+          description: Preview work was queued or an identical request is already active/cached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewQueuedResponse"
+        "400":
+          description: Invalid JSON or label index outside the supported local range.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Mutation did not satisfy the local inspector policy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Job is missing, cleared, or evicted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Rendering is disabled or another render for this job is pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Payload is not recognized as ZPL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Bounded preview queue or store capacity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     PingResponse:
@@ -141,10 +473,10 @@ components:
       properties:
         message:
           type: string
-          example: pong
-
+          enum: [pong]
     StatusResponse:
       type: object
+      additionalProperties: false
       required: [reachable, host, port]
       properties:
         reachable:
@@ -153,37 +485,171 @@ components:
           type: string
         port:
           type: integer
-
+    VirtualStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [reachable, host, port, destination]
+      properties:
+        reachable:
+          type: boolean
+          description: Local capture availability, independent of preview/network availability.
+        host:
+          type: string
+          description: Trimmed supplied host, or an empty string when omitted.
+        port:
+          type: integer
+          description: Supplied port or the configured default.
+        destination:
+          type: string
+          enum: [virtual]
     PrintJobRequest:
       type: object
-      required: [printerHostname, text]
+      required: [text]
+      description: >
+        Hostname is additionally required in Physical mode. Virtual mode accepts
+        one JSON object; known supplied fields must have their declared non-null
+        types. Unknown fields are ignored and cannot choose a destination.
       properties:
         printerHostname:
           type: string
-          description: Printer IP address or hostname.
-          example: "192.168.1.100"
+          description: Physical printer host, or optional Virtual metadata. Trimmed; the configured defaultPrinterAddress does not fill it in.
         printerPort:
           type: integer
-          default: 9100
-          description: Printer TCP port. Optional — defaults to 9100 if omitted.
-          example: 9100
+          minimum: 0
+          maximum: 65535
+          description: Omitted/zero uses defaultPrinterPort (9100 on new installs). Virtual mode stores it as metadata only.
         text:
           type: string
-          description: Raw printer-language payload (e.g. ZPL, EPL, CPCL) sent as-is to the printer. Not validated or transformed by the bridge.
-          example: "^XA^FO50,50^ADN,36,20^FDTest Label^FS^XZ"
-
+          minLength: 1
+          description: Non-empty raw text. Whitespace, line endings, Unicode, and control characters remain unchanged after JSON decoding. Limits count bytes, not characters or JSON escape spelling.
     PrintJobResponse:
       type: object
+      additionalProperties: false
       required: [message]
       properties:
         message:
           type: string
-          example: "OK"
-
+          enum: [OK]
+    VirtualPrintJobResponse:
+      type: object
+      additionalProperties: false
+      required: [message, destination, jobId]
+      properties:
+        message:
+          type: string
+          enum: [OK]
+        destination:
+          type: string
+          enum: [virtual]
+        jobId:
+          type: string
+          minLength: 1
+          description: Opaque ID of the captured session job.
+    InspectorJobsResponse:
+      type: object
+      additionalProperties: false
+      required: [jobs, previewEnabled]
+      properties:
+        jobs:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/InspectorJob"
+        previewEnabled:
+          type: boolean
+          description: True only when Labelary previews are enabled in Virtual mode.
+    InspectorJobResponse:
+      type: object
+      additionalProperties: false
+      required: [job]
+      properties:
+        job:
+          $ref: "#/components/schemas/InspectorJobDetail"
+    InspectorJob:
+      type: object
+      additionalProperties: false
+      required: [id, receivedAt, target, byteCount, detectedType, captureState, previewState, previewLabelIndex]
+      properties:
+        id:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+        target:
+          type: string
+        byteCount:
+          type: integer
+          minimum: 0
+          maximum: 1048576
+        detectedType:
+          type: string
+        captureState:
+          type: string
+        previewState:
+          type: string
+          description: disabled, queued, rendering, ready, unsupported, or failed.
+        previewLabelIndex:
+          type: integer
+          minimum: 0
+          maximum: 99
+        previewError:
+          type: string
+          maxLength: 512
+    InspectorJobDetail:
+      type: object
+      additionalProperties: false
+      required: [id, receivedAt, target, byteCount, detectedType, captureState, previewState, previewLabelIndex, downloadUrl, previewUrl]
+      properties:
+        id: { type: string }
+        receivedAt: { type: string, format: date-time }
+        target: { type: string }
+        byteCount: { type: integer, minimum: 0, maximum: 1048576 }
+        detectedType: { type: string }
+        captureState: { type: string }
+        previewState: { type: string }
+        previewLabelIndex: { type: integer, minimum: 0, maximum: 99 }
+        previewError: { type: string, maxLength: 512 }
+        downloadUrl: { type: string, format: uri-reference }
+        previewUrl: { type: string, format: uri-reference }
+    ClearInspectorJobsResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          enum: [OK]
+    PreviewUnavailableResponse:
+      type: object
+      additionalProperties: false
+      required: [message, previewState]
+      properties:
+        message:
+          type: string
+          enum: ["preview not available"]
+        previewState:
+          type: string
+    PreviewRenderRequest:
+      type: object
+      properties:
+        labelIndex:
+          type: integer
+          minimum: 0
+          maximum: 99
+          default: 0
+          description: Zero-based label index within a multi-label ZPL job.
+    PreviewQueuedResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          enum: ["preview queued"]
     ErrorResponse:
       type: object
       required: [message]
       properties:
         message:
           type: string
-          description: Human-readable error detail. Not a machine-parseable error code in the current beta — callers should treat any non-2xx response as a failure and surface `message` to their own users/logs as needed.
+          description: Human-readable detail; callers should use HTTP status for failure classification.

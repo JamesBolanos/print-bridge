@@ -35,6 +35,17 @@ it.
 | Token/API-key authentication | Matches a common localhost bridge trust model (CORS-only for browser callers). Adding auth would require the caller's web app to manage and transmit a secret client-side, which doesn't meaningfully improve security for a same-machine, localhost-only tool and adds integration friction that works against BR-5 (low integration friction). |
 | Format conversion (PDF/image → ZPL) | Out of scope — this is a passthrough bridge, not a rendering engine. Significant scope/complexity increase for a free tool. |
 
+## Approved Virtual Mode extension (implemented through VM-8)
+
+The [Virtual Mode sprint](../08-backlog/virtual-mode-sprint.md) authorizes an
+optional external ZPL preview adapter and a local browser dashboard served by
+the existing binary. Preview generation does not transform the physical print
+payload or introduce a separate service. No paid renderer subscription is
+required. Capture and raw inspection must work offline; PDF input and a local
+ZPL rendering engine remain deferred. The implementation and automated
+integration checks are complete; interactive native and installer smoke checks
+remain release follow-up. See ADR-006 for the boundary.
+
 ## What is NOT constrained
 
 To avoid the opposite failure mode — treating everything as fixed — these are open and should be decided in the relevant architecture/design docs, not assumed from this file:

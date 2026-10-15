@@ -47,7 +47,7 @@ func TestSaveRejectsInvalidConfig(t *testing.T) {
 	assert.Contains(t, err.Error(), "httpPort")
 }
 
-func TestLoadOrCreateRestoresDefaultsForMalformedConfig(t *testing.T) {
+func TestLoadOrCreatePreservesMalformedConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	require.NoError(t, os.WriteFile(path, []byte("{bad json"), 0o644))
 
@@ -55,11 +55,17 @@ func TestLoadOrCreateRestoresDefaultsForMalformedConfig(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, result.UsedDefaults)
+	assert.True(t, result.RecoveryRequired)
 	assert.NotEmpty(t, result.Warning)
-	assert.Equal(t, Default(), cfg)
+	assert.Empty(t, cfg.DestinationType)
+	_, err = Normalize(cfg)
+	assert.Error(t, err)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "{bad json", string(data))
 }
 
-func TestLoadOrCreateRestoresDefaultsForInvalidConfig(t *testing.T) {
+func TestLoadOrCreatePreservesInvalidConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	require.NoError(t, os.WriteFile(path, []byte(`{
 		"httpPort": 8080,
@@ -72,6 +78,12 @@ func TestLoadOrCreateRestoresDefaultsForInvalidConfig(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(t, result.UsedDefaults)
+	assert.True(t, result.RecoveryRequired)
 	assert.NotEmpty(t, result.Warning)
-	assert.Equal(t, Default(), cfg)
+	assert.Empty(t, cfg.DestinationType)
+	_, err = Normalize(cfg)
+	assert.Error(t, err)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "https://app.example.com/orders")
 }

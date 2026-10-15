@@ -19,11 +19,12 @@ print-bridge is an independent, unofficial project. It is **not affiliated with,
 - A GUI desktop app (Mac + Windows) the user launches manually when they need to print.
 - Minimizes to the system tray/menu bar while running; fully quits when the user quits it.
 - Settings UI to configure: local HTTP port, target printer port, default printer address.
-- Local HTTP API: `POST /print` (raw passthrough), `GET /ping` (liveness), `GET /status` (printer reachability check).
+- Local HTTP API: `POST /print` (physical raw passthrough or Virtual capture), `GET /ping` (liveness), and `GET /status` (physical reachability or Virtual capture readiness).
 - CORS-based browser access control, matching the common trust model used by local desktop bridge tools.
-- Socket-level write/read timeout so an unreachable printer fails fast instead of hanging.
+- Explicit TCP connect and write timeouts so an unreachable printer fails fast instead of hanging.
 - Local rotating log file, viewable from within the app.
 - Installers for both platforms (`.msi` via WiX Toolset on Windows, `.dmg` on macOS), with free macOS ad-hoc signing and documented user-facing workarounds for unsigned downloads.
+- Optional Virtual mode for hardware-free capture and local browser inspection; Labelary previews are disabled by default and require an explicit setting.
 
 ## What The Current Beta Explicitly Is Not
 
@@ -34,6 +35,16 @@ print-bridge is an independent, unofficial project. It is **not affiliated with,
 - **Not multi-printer-profile management.** The caller supplies the target IP/port per request; there's no saved address book in the current beta.
 
 These exclusions are deliberate scope cuts, not gaps — see `03-architecture/decisions.md` for the reasoning behind each, so they aren't silently reintroduced during the build.
+
+## Virtual Mode sprint
+
+The Virtual Mode implementation and automated integration coverage are
+complete: developers can test without hardware, inspect captured ZPL/raw text
+in the local browser dashboard, and optionally request online Labelary
+previews. Native tray/browser and installer smoke checks remain release
+follow-up; they have not been reported as passed. Offline capture and raw
+inspection are in scope; PDF/binary input and offline ZPL rendering are
+deferred. See the [sprint verification record](../08-backlog/virtual-mode-sprint.md).
 
 ## Primary users
 
