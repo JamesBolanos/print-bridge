@@ -32,7 +32,9 @@ func TestPing(t *testing.T) {
 }
 
 func TestEmptyAllowedOriginsDenyBrowserOrigin(t *testing.T) {
-	router := testRouter(t, nil)
+	cfg := config.Default()
+	cfg.AllowedOrigins = []string{}
+	router := testRouterWithConfig(t, cfg, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
@@ -41,6 +43,27 @@ func TestEmptyAllowedOriginsDenyBrowserOrigin(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
 	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestDefaultOriginsAllowLabelMakerPreflight(t *testing.T) {
+	for _, origin := range []string{"https://sscc-labels.com", "https://www.sscc-labels.com", "https://untrusted.example.com"} {
+		t.Run(origin, func(t *testing.T) {
+			router := testRouter(t, nil)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodOptions, "/print", nil)
+			req.Header.Set("Origin", origin)
+			req.Header.Set("Access-Control-Request-Method", "POST")
+			req.Header.Set("Access-Control-Request-Headers", "content-type")
+			router.ServeHTTP(w, req)
+			if origin == "https://untrusted.example.com" {
+				assert.Equal(t, http.StatusForbidden, w.Code)
+				assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+			} else {
+				assert.Equal(t, http.StatusNoContent, w.Code)
+				assert.Equal(t, origin, w.Header().Get("Access-Control-Allow-Origin"))
+			}
+		})
+	}
 }
 
 func TestConfiguredAllowedOriginReceivesCORSHeader(t *testing.T) {

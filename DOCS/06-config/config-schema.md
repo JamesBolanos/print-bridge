@@ -34,7 +34,7 @@ New installations create:
   "httpPort": 8080,
   "defaultPrinterPort": 9100,
   "defaultPrinterAddress": "",
-  "allowedOrigins": []
+  "allowedOrigins": ["https://sscc-labels.com", "https://www.sscc-labels.com"]
 }
 ```
 
@@ -46,7 +46,11 @@ New installations create:
 | `httpPort` | integer | `8080` | 1024–65535; port must be available at startup |
 | `defaultPrinterPort` | integer | `9100` | 1–65535; supplies omitted/zero request ports |
 | `defaultPrinterAddress` | string | Empty | Optional display/settings convenience; does not replace the required Physical request hostname |
-| `allowedOrigins` | string array | Empty | HTTP(S) origins with scheme, host, optional port; no query, fragment, credentials, or page path |
+| `allowedOrigins` | string array | Both HTTPS SSCC label-maker origins above | HTTP(S) origins with scheme, host, optional port; no query, fragment, credentials, or page path |
+
+These origins are defaults for new installations starting with v1.0.0-beta.4.
+Existing configuration files retain their saved origins, including an empty list.
+Users can add or remove origins in Settings.
 
 ## Destination and preview settings
 

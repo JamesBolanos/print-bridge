@@ -177,9 +177,12 @@ On first launch, `print-bridge` creates a local `config.json` file:
 - macOS: `~/Library/Application Support/PrintBridge/config.json`
 - Windows: `%APPDATA%\PrintBridge\config.json`
 
-New installs start with an empty CORS allow-list (`allowedOrigins: []`).
+Starting with v1.0.0-beta.4, new installs allow `https://sscc-labels.com` and
+`https://www.sscc-labels.com` so the SSCC label maker can connect immediately.
+Existing installations keep their saved allow-list, including an intentionally
+empty list; add either label-maker origin in Settings if needed after upgrading.
 
-Add only the web app origins this installation needs from the Settings screen. For example, a local development app might add `http://localhost:3000`, while a deployed app might add `https://app.example.com`. With an empty list, browser-based callers cannot use the API until an origin is added; non-browser local tools such as `curl` are not governed by CORS.
+Add or remove trusted web app origins from the Settings screen. For example, a local development app might add `http://localhost:3000`, while a deployed app might add `https://app.example.com`. With an empty list, browser-based callers cannot use the API until an origin is added; non-browser local tools such as `curl` are not governed by CORS.
 
 ## Support And Feedback
 

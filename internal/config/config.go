@@ -33,8 +33,12 @@ const (
 	DestinationVirtual = "virtual"
 )
 
-// DefaultAllowedOrigins is intentionally empty so new installs deny browser CORS requests.
-var DefaultAllowedOrigins = []string{}
+// DefaultAllowedOrigins lets new installations connect to the SSCC label maker.
+// Loading an existing configuration preserves its saved allow-list.
+var DefaultAllowedOrigins = []string{
+	"https://sscc-labels.com",
+	"https://www.sscc-labels.com",
+}
 
 // Config contains the persisted print bridge settings.
 type Config struct {

@@ -2,7 +2,7 @@
 
 ## Model: CORS allow-list, no additional authentication
 
-print-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). The allow-list is empty on first launch, so the user must add each trusted web app origin explicitly. There is no API key, token, or session layer in the current beta.
+print-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). New installations allow `https://sscc-labels.com` and `https://www.sscc-labels.com` for the SSCC label maker. Users can remove these or add other trusted origins in Settings. Existing installations retain their saved allow-list, including an empty list. There is no API key, token, or session layer in the current beta.
 
 This deliberately uses a known, established trust model for this category of localhost bridge tool, not a novel security posture.
 

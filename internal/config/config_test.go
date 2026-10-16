@@ -9,10 +9,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDefaultAllowedOriginsAreEmpty(t *testing.T) {
+func TestDefaultAllowedOriginsIncludeLabelMaker(t *testing.T) {
 	cfg := Default()
 
-	assert.Empty(t, cfg.AllowedOrigins)
+	assert.Equal(t, []string{"https://sscc-labels.com", "https://www.sscc-labels.com"}, cfg.AllowedOrigins)
+	cfg.AllowedOrigins[0] = "https://changed.example.com"
+	assert.Equal(t, "https://sscc-labels.com", Default().AllowedOrigins[0])
+}
+
+func TestLoadOrCreatePreservesSavedAllowedOrigins(t *testing.T) {
+	for _, origins := range [][]string{{}, {"https://custom.example.com"}} {
+		path := filepath.Join(t.TempDir(), "config.json")
+		cfg := Default()
+		cfg.AllowedOrigins = origins
+		require.NoError(t, Save(path, cfg))
+		before, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		loaded, result, err := LoadOrCreate(path)
+		require.NoError(t, err)
+		assert.False(t, result.Created)
+		assert.Equal(t, origins, loaded.AllowedOrigins)
+		after, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, before, after)
+	}
 }
 
 func TestValidateOrigin(t *testing.T) {
