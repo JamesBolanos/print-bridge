@@ -54,8 +54,8 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 - HTTP port (numeric input)
 - Default printer port (numeric input, pre-filled with 9100)
 - Default printer address (optional text input — a convenience default, not a saved profile list; see ADR scope note below)
-- CORS allowed origins (one origin per line in a multiline field; empty by
-  default)
+- CORS allowed origins (one origin per line; new installations include
+  `https://sscc-labels.com` and `https://www.sscc-labels.com`; upgrades preserve saved values)
 - Optional Labelary preview enablement, with a disclosure that full label
   contents are sent to the external service, plus label width/height and
   density fields.
@@ -129,7 +129,7 @@ Persistent while the app is running (whether the main window is open or minimize
 |---|---|
 | Listener fails to start (e.g. port already in use) | Main window shows a clear error with the specific reason and a shortcut to Settings to change the port. Tray icon still appears (so the user isn't left with no way to reach the app) but its status line reflects "Stopped." |
 | Settings save triggers restart, restart fails | Show the same error pattern as above, inline in the Settings screen, without discarding the user's entered values (so they don't have to retype). |
-| First launch | No special onboarding flow required for the current beta. The listener can start immediately, but browser web apps cannot call it until the user adds the required origin(s) in Settings. |
+| First launch | No special onboarding flow required for the current beta. The listener starts immediately with the two SSCC label-maker origins allowed. Other web apps require their origin(s) to be added in Settings. |
 | Invalid or ambiguous saved configuration (VM-3) | Leave the original file untouched and the listener stopped. Show the repair reason and config path in the main window and Settings; disable Settings Save. Repair the file and restart the app. Displayed defaults are not an active Physical configuration. |
 | Valid Virtual configuration (VM-4/VM-8) | Start the listener with local capture. The main window and tray identify Virtual mode; switching modes preserves printer address/port. |
 

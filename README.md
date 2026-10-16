@@ -4,6 +4,10 @@
 
 It runs as a small desktop tray app, exposes a localhost HTTP API, and forwards raw printer-language text such as ZPL, EPL, or CPCL to a network printer over TCP.
 
+## Print from SSCC Labels
+
+Start with the [installation and setup guide](DOCS/sscc-labels-setup.md): choose your installer, configure the bridge and printer, and send your first saved label. The guide also explains upgrades and common connection problems.
+
 ## Project Status
 
 Current status: **beta**. The core app, local API, config, logging, and release
