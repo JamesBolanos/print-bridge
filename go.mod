@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/cors v1.7.10
 	github.com/gin-gonic/gin v1.12.0
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/sys v0.48.0
+	golang.org/x/sys v0.50.0
 )
 
 require (
