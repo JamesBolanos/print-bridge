@@ -1,14 +1,25 @@
 # Security Model — print-bridge
 
-## Model: CORS allow-list, no additional authentication
+## Model: Local HTTP API plus optional LAN TCP intake
 
-print-bridge trusts requests based solely on the browser's CORS enforcement of an allow-listed set of origins, configured via the app (see `06-config/config-schema.md`). New installations allow `https://sscc-labels.com` and `https://www.sscc-labels.com` for the SSCC label maker. Users can remove these or add other trusted origins in Settings. Existing installations retain their saved allow-list, including an empty list. There is no API key, token, or session layer in the current beta.
+The HTTP integration API and Inspector bind to `127.0.0.1`. Browser access to
+the integration API uses a configured CORS allow-list (see
+`06-config/config-schema.md`). New installations allow `https://sscc-labels.com`
+and `https://www.sscc-labels.com`; users can remove these or add other origins.
+Existing installations retain their saved allow-list, including an empty list.
+There is no API key, token, or session layer for HTTP callers.
+
+Separately, Virtual mode has an optional raw TCP virtual printer on port 9100.
+It is disabled by default, must be explicitly enabled in Settings, and only
+starts while Virtual destination is selected. When enabled it binds to all IPv4
+interfaces and accepts unauthenticated jobs from devices that can reach the
+computer. CORS does not apply to this listener.
 
 This deliberately uses a known, established trust model for this category of localhost bridge tool, not a novel security posture.
 
 ## Why this is the accepted model for the current beta
 
-- **The bridge only listens on localhost.** It binds to `127.0.0.1`, so it is not exposed to other machines on the network. Same-machine processes can still reach it.
+- **The HTTP API and Inspector listen on localhost.** They bind to `127.0.0.1`, so they are not exposed to other machines on the network. Same-machine processes can still reach them.
 - **CORS is enforced by the browser, not by print-bridge.** A browser request from a non-allow-listed origin is blocked by browser CORS handling. This is not general-purpose authentication and does not restrict non-browser local clients such as scripts or native apps.
 - **Adding a token would require the calling web app to embed and transmit a secret in client-side JavaScript**, which is visible to anyone who opens browser dev tools. It would not meaningfully raise the security bar for this specific threat model, while adding real integration friction (BR-5) for every developer using the tool.
 
@@ -20,6 +31,8 @@ This deliberately uses a known, established trust model for this category of loc
 | Same-machine non-browser clients bypass CORS | CORS does not stop local scripts, command-line tools, or native apps from calling the localhost API | Accepted for the current beta because this is a local desktop utility. The security boundary is the user's machine account and localhost binding, not a secret-bearing API. |
 | No rate limiting | A misbehaving page could send many rapid print/status requests | Low-severity for a local, single-user tool; worst case is excessive printer output or log growth, not data exposure |
 | DNS rebinding | In theory, a malicious page could attempt DNS rebinding to make `localhost`-restricted logic target the bridge from an origin that shouldn't be allow-listed | Not mitigated in the current beta. Flagged here as a known limitation; mitigation (e.g., validating the `Host` header) is a reasonable future backlog item, not a beta blocker, given the overall low-severity threat model of a local label-printing tool |
+| LAN virtual printer access | While enabled in Virtual mode, any device that can reach TCP port 9100 can submit jobs; the listener binds to all IPv4 interfaces, has no authentication, and does not use CORS. Network routing or port forwarding may make it reachable beyond the local subnet | Explicit opt-in; disabled by default and not active in Physical mode. The user must trust the reachable network and check firewall/router rules; they can disable the listener in Settings |
+| Malicious or excessive TCP submissions | A reachable client can submit arbitrary raw bytes or consume connection/read capacity | Jobs are bounded by the existing 1 MiB capture limit; at most eight clients are handled concurrently and incomplete reads time out after 30 seconds. Preview sharing remains controlled separately by Labelary settings |
 
 ## What must NOT be added in the current beta
 
@@ -36,7 +49,7 @@ so they use a narrower browser access policy than print submission. The
 existing CORS risk table above still describes the integration API. See
 [ADR-006](decisions.md) and the [sprint checklist](../08-backlog/virtual-mode-sprint.md).
 
-- Keep the listener on `127.0.0.1` and use a canonical local dashboard origin.
+- Keep the HTTP API and Inspector listener on `127.0.0.1` and use a canonical local dashboard origin.
   Inspector routes require `Host: 127.0.0.1:<active-port>`, including requests
   without an Origin header.
 - Do not apply the integration origin allow-list to history, payload download,

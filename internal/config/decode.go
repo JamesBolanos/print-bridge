@@ -12,7 +12,7 @@ import (
 // configuration. A legacy file containing new fields is ambiguous, not a reason
 // to replace an explicitly saved destination with Physical.
 func decodeConfig(data []byte) (Config, bool, error) {
-	fields, err := configObject(data, "configuration", "configVersion", "destinationType", "preview", "httpPort", "defaultPrinterPort", "defaultPrinterAddress", "allowedOrigins")
+	fields, err := configObject(data, "configuration", "configVersion", "destinationType", "virtualTCPEnabled", "preview", "httpPort", "defaultPrinterPort", "defaultPrinterAddress", "allowedOrigins")
 	if err != nil {
 		return Config{}, false, err
 	}
@@ -29,11 +29,14 @@ func decodeConfig(data []byte) (Config, bool, error) {
 		return Config{}, false, fmt.Errorf("unsupported configVersion %d", version)
 	}
 	if version == 0 {
-		for _, name := range []string{"destinationType", "preview"} {
+		for _, name := range []string{"destinationType", "virtualTCPEnabled", "preview"} {
 			if _, present := fields[name]; present {
 				return Config{}, false, fmt.Errorf("%s requires configVersion %d", name, CurrentVersion)
 			}
 		}
+	}
+	if raw, present := fields["virtualTCPEnabled"]; present && isNull(raw) {
+		return Config{}, false, fmt.Errorf("virtualTCPEnabled must not be null")
 	}
 	if raw, present := fields["preview"]; present {
 		preview, err := configObject(raw, "preview", "labelaryEnabled", "labelWidthInches", "labelHeightInches", "printDensityDpmm")

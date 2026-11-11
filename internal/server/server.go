@@ -29,6 +29,8 @@ const (
 	DefaultConnectTimeout = 3 * time.Second
 	// DefaultWriteTimeout limits how long the bridge waits while sending print data.
 	DefaultWriteTimeout = 5 * time.Second
+	// VirtualTCPPort is the raw TCP intake port used by the optional virtual printer.
+	VirtualTCPPort = 9100
 )
 
 // DialContextFunc is the TCP dialing shape used by the server.
@@ -77,6 +79,9 @@ type Server struct {
 	lastErr    error
 	captures   *capture.Store
 	previews   *previewManager
+	tcpIngest  *virtualTCPListener
+	listenTCP  func(network, address string) (net.Listener, error)
+	tcpAddress string
 }
 
 // New creates a server that can be started with Start.
@@ -84,13 +89,22 @@ func New(cfg config.Config, logger *logging.Logger) *Server {
 	captures := capture.NewStore()
 	return &Server{
 		cfg: cfg, logger: logger, captures: captures,
-		previews: newPreviewManager(captures, nil),
+		previews:   newPreviewManager(captures, nil),
+		listenTCP:  net.Listen,
+		tcpAddress: net.JoinHostPort("0.0.0.0", strconv.Itoa(VirtualTCPPort)),
 	}
 }
 
 // CaptureStore returns the application session's store. Listener restarts keep
 // it alive; Close releases it when the application exits.
 func (s *Server) CaptureStore() *capture.Store { return s.captures }
+
+// VirtualTCPRunning reports whether the opt-in LAN printer listener is active.
+func (s *Server) VirtualTCPRunning() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.tcpIngest != nil && s.tcpIngest.running()
+}
 
 // NewRouter builds the Gin router for the local print bridge API.
 func NewRouter(opts Options) *gin.Engine {
@@ -149,7 +163,8 @@ func corsConfig(allowedOrigins []string) cors.Config {
 	return cfg
 }
 
-// Start binds the HTTP listener to localhost and serves requests in a goroutine.
+// Start binds the HTTP listener to localhost and optionally starts the Virtual
+// mode TCP intake listener before serving requests.
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -167,9 +182,29 @@ func (s *Server) Start() error {
 	s.cfg = normalized
 	s.previews.Configure(normalized.Preview, normalized.DestinationType == config.DestinationVirtual)
 
+	var tcpIngest *virtualTCPListener
+	if normalized.DestinationType == config.DestinationVirtual && normalized.VirtualTCPEnabled {
+		listener, err := s.listenTCP("tcp", s.tcpAddress)
+		if err != nil {
+			s.lastErr = fmt.Errorf("virtual printer listener failed to start: %w", err)
+			return s.lastErr
+		}
+		tcpIngest = newVirtualTCPListener(listener, func(ctx context.Context, target string, payload []byte) error {
+			_, err := captureVirtualJob(ctx, Options{
+				Config: normalized, Logger: s.logger, CaptureStore: s.captures, previews: s.previews,
+			}, target, payload)
+			return err
+		}, func(target, outcome, detail string) {
+			record(Options{Logger: s.logger}, "/tcp/9100", target, outcome, detail)
+		})
+	}
+
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(s.cfg.HTTPPort))
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
+		if tcpIngest != nil {
+			_ = tcpIngest.Stop()
+		}
 		s.lastErr = err
 		return err
 	}
@@ -183,18 +218,25 @@ func (s *Server) Start() error {
 
 	s.listener = listener
 	s.httpServer = srv
+	s.tcpIngest = tcpIngest
 	s.lastErr = nil
 
 	go func() {
 		err := srv.Serve(serveListener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			var tcpIngest *virtualTCPListener
 			s.mu.Lock()
 			if s.httpServer == srv {
 				s.lastErr = err
 				s.httpServer = nil
 				s.listener = nil
+				tcpIngest = s.tcpIngest
+				s.tcpIngest = nil
 			}
 			s.mu.Unlock()
+			if tcpIngest != nil {
+				_ = tcpIngest.Stop()
+			}
 		}
 	}()
 	<-ready
@@ -202,7 +244,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Stop gracefully shuts down the HTTP listener.
+// Stop gracefully shuts down the HTTP listener and any active virtual TCP intake.
 func (s *Server) Stop(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -210,14 +252,20 @@ func (s *Server) Stop(ctx context.Context) error {
 
 	s.mu.Lock()
 	srv := s.httpServer
+	tcpIngest := s.tcpIngest
 	s.httpServer = nil
 	s.listener = nil
+	s.tcpIngest = nil
 	s.mu.Unlock()
 
-	if srv == nil {
-		return nil
+	var tcpErr error
+	if tcpIngest != nil {
+		tcpErr = tcpIngest.Stop()
 	}
-	return srv.Shutdown(ctx)
+	if srv == nil {
+		return tcpErr
+	}
+	return errors.Join(tcpErr, srv.Shutdown(ctx))
 }
 
 type readyListener struct {
@@ -402,19 +450,7 @@ func handlePrint(c *gin.Context, opts Options) {
 	response := gin.H{"message": "OK"}
 	if virtual {
 		var meta capture.Metadata
-		meta, err = opts.CaptureStore.Capture(c.Request.Context(), target, []byte(req.Text))
-		if err == nil {
-			detectedType := detectZPL([]byte(req.Text))
-			previewState := "disabled"
-			renderEnabled := opts.previews.Enabled()
-			if renderEnabled && detectedType != "zpl" {
-				previewState = "unsupported"
-			}
-			if classifyErr := opts.CaptureStore.Classify(meta.ID, detectedType, previewState); classifyErr == nil &&
-				renderEnabled && detectedType == "zpl" {
-				_ = opts.previews.Schedule(meta.ID, 0)
-			}
-		}
+		meta, err = captureVirtualJob(c.Request.Context(), opts, target, []byte(req.Text))
 		response["destination"] = config.DestinationVirtual
 		response["jobId"] = meta.ID
 	} else {
@@ -445,6 +481,29 @@ func handlePrint(c *gin.Context, opts Options) {
 
 	record(opts, "/print", target, "success", "OK")
 	c.JSON(http.StatusOK, response)
+}
+
+// captureVirtualJob stores exact payload bytes and schedules optional ZPL
+// rendering without making capture success depend on preview availability.
+func captureVirtualJob(ctx context.Context, opts Options, target string, payload []byte) (capture.Metadata, error) {
+	if len(payload) == 0 {
+		return capture.Metadata{}, errors.New("missing required field 'text'")
+	}
+	meta, err := opts.CaptureStore.Capture(ctx, target, payload)
+	if err != nil {
+		return capture.Metadata{}, err
+	}
+	detectedType := detectZPL(payload)
+	previewState := "disabled"
+	renderEnabled := opts.previews.Enabled()
+	if renderEnabled && detectedType != "zpl" {
+		previewState = "unsupported"
+	}
+	if classifyErr := opts.CaptureStore.Classify(meta.ID, detectedType, previewState); classifyErr == nil &&
+		renderEnabled && detectedType == "zpl" {
+		_ = opts.previews.Schedule(meta.ID, 0)
+	}
+	return meta, nil
 }
 
 // decodeVirtualPrint accepts one JSON object and validates supplied field types.

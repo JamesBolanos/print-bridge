@@ -17,6 +17,8 @@ The store implements the `Destination` methods without dialing a printer.
 The router selects this store whenever the saved destination is Virtual,
 regardless of supplied printer targets or injected physical transports.
 `/print` calls Capture to return the new ID; `/status` checks store availability.
+When the optional Virtual TCP printer is enabled, its raw connection intake
+calls the same internal capture/classification/preview flow as `/print`.
 `Options.CaptureStore` supplies the shared application store; standalone routers
 create a private store when omitted. Physical startup uses TCP.
 

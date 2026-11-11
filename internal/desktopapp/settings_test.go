@@ -20,7 +20,7 @@ func TestSettingsApplyDestinationAndPreview(t *testing.T) {
 	base.AllowedOrigins = []string{"https://old.example.com"}
 	got, err := settingsConfig(
 		base, " 8181 ", "9200", " printer.local ", "https://new.example.com\nhttp://localhost:3000",
-		"Physical", false, "4", "6", "8",
+		"Physical", false, false, "4", "6", "8",
 	)
 	require.NoError(t, err)
 	assert.Equal(t, config.CurrentVersion, got.ConfigVersion)
@@ -33,10 +33,11 @@ func TestSettingsApplyDestinationAndPreview(t *testing.T) {
 
 	got, err = settingsConfig(
 		base, "8181", "9200", "saved-printer.local", "https://old.example.com",
-		"Virtual (capture only)", true, "2.5", "3", "12",
+		"Virtual (capture only)", true, true, "2.5", "3", "12",
 	)
 	require.NoError(t, err)
 	assert.Equal(t, config.DestinationVirtual, got.DestinationType)
+	assert.True(t, got.VirtualTCPEnabled)
 	assert.Equal(t, config.PreviewConfig{LabelaryEnabled: true, LabelWidthInches: 2.5, LabelHeightInches: 3, PrintDensityDpmm: 12}, got.Preview)
 	assert.Equal(t, "saved-printer.local", got.DefaultPrinterAddress, "mode changes preserve physical settings")
 	assert.Equal(t, 9200, got.DefaultPrinterPort)
@@ -47,7 +48,7 @@ func TestSettingsApplyDestinationAndPreview(t *testing.T) {
 func TestSettingsCannotMakeRecoveryConfigRunnable(t *testing.T) {
 	base := config.Default()
 	base.DestinationType = "" // display-only recovery state from LoadOrCreate
-	_, err := settingsConfig(base, "8080", "9100", "", "", "Physical", false, "4", "6", "8")
+	_, err := settingsConfig(base, "8080", "9100", "", "", "Physical", false, false, "4", "6", "8")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "destinationType")
 }
@@ -62,7 +63,7 @@ func TestSettingsRejectInvalidEdits(t *testing.T) {
 		{"8080", "9100", "", "", "Virtual (capture only)", "true", "NaN", "6", "8"},
 		{"8080", "9100", "", "", "Physical", "false", "4", "6", "7"},
 	} {
-		_, err := settingsConfig(config.Default(), edits[0], edits[1], edits[2], edits[3], edits[4], edits[5] == "true", edits[6], edits[7], edits[8])
+		_, err := settingsConfig(config.Default(), edits[0], edits[1], edits[2], edits[3], edits[4], false, edits[5] == "true", edits[6], edits[7], edits[8])
 		assert.Error(t, err)
 	}
 }
@@ -93,4 +94,16 @@ func TestModeLabel(t *testing.T) {
 	assert.Equal(t, "Physical", destinationLabel(config.DestinationPhysical))
 	assert.Equal(t, "Virtual (capture only)", destinationLabel(config.DestinationVirtual))
 	assert.Equal(t, "Unavailable (repair required)", destinationLabel(""))
+}
+
+func TestVirtualTCPStatus(t *testing.T) {
+	cfg := config.Default()
+	assert.Equal(t, "Disabled", virtualTCPStatus(cfg, false))
+
+	cfg.VirtualTCPEnabled = true
+	assert.Equal(t, "Enabled in Settings; active only in Virtual mode", virtualTCPStatus(cfg, false))
+
+	cfg.DestinationType = config.DestinationVirtual
+	assert.Equal(t, "Enabled, but not listening", virtualTCPStatus(cfg, false))
+	assert.Equal(t, "Listening on TCP port 9100", virtualTCPStatus(cfg, true))
 }

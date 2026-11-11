@@ -102,6 +102,7 @@ func TestInvalidFilesRequireRepairWithoutChangingOriginal(t *testing.T) {
 		"zero width":              strings.Replace(modernConfig, `"labelWidthInches":2.5`, `"labelWidthInches":0`, 1),
 		"null opt in":             strings.Replace(modernConfig, `"labelaryEnabled":true`, `"labelaryEnabled":null`, 1),
 		"string opt in":           strings.Replace(modernConfig, `"labelaryEnabled":true`, `"labelaryEnabled":"true"`, 1),
+		"null virtual tcp opt in": strings.Replace(modernConfig, `"destinationType":"virtual"`, `"destinationType":"virtual","virtualTCPEnabled":null`, 1),
 		"bad origin":              strings.Replace(modernConfig, `"allowedOrigins":[]`, `"allowedOrigins":["not an origin"]`, 1),
 		"trailing object":         modernConfig + `{}`,
 	}
@@ -124,6 +125,25 @@ func TestInvalidFilesRequireRepairWithoutChangingOriginal(t *testing.T) {
 			assert.Equal(t, original, string(unchanged))
 		})
 	}
+}
+
+func TestVirtualTCPOptInDefaultsOffAndRoundTrips(t *testing.T) {
+	cfg, migrated, err := decodeConfig([]byte(modernConfig))
+	require.NoError(t, err)
+	assert.False(t, migrated)
+	assert.False(t, cfg.VirtualTCPEnabled)
+
+	withListener := strings.Replace(modernConfig, `"destinationType":"virtual"`, `"destinationType":"virtual","virtualTCPEnabled":true`, 1)
+	cfg, migrated, err = decodeConfig([]byte(withListener))
+	require.NoError(t, err)
+	assert.False(t, migrated)
+	assert.True(t, cfg.VirtualTCPEnabled)
+
+	path := filepath.Join(t.TempDir(), "config.json")
+	require.NoError(t, Save(path, cfg))
+	reloaded, _, err := LoadOrCreate(path)
+	require.NoError(t, err)
+	assert.True(t, reloaded.VirtualTCPEnabled)
 }
 
 func TestPreviewValidationAndFailedSavePreserveExistingConfig(t *testing.T) {

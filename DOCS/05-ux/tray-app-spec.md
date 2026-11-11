@@ -51,6 +51,9 @@ Opened from the main window. See `06-config/config-schema.md` for the exact fiel
 
 **Contents:**
 - Destination selector: Physical or Virtual (capture only).
+- Optional LAN virtual printer on TCP port 9100, disabled by default. The
+  disclosure must state that it is unauthenticated and reachable from the
+  network, and is active only in Virtual mode. Port conflicts must be reported.
 - HTTP port (numeric input)
 - Default printer port (numeric input, pre-filled with 9100)
 - Default printer address (optional text input — a convenience default, not a saved profile list; see ADR scope note below)
@@ -159,6 +162,10 @@ checks remain release follow-up; they have not been reported as passed.
   controls. External rendering operates only in Virtual mode.
 - Preview settings do not modify source data. Enabling rendering applies to
   new jobs; old jobs require an explicit render/retry action.
+- Settings exposes the raw TCP virtual printer opt-in. Show whether it is
+  active, explain one job per connection (client closes to finish), and warn
+  that any reachable LAN client can submit jobs. It must not start in Physical
+  mode and must stop on mode change or app shutdown.
 - Preserve current Save/Cancel behavior and inline errors. Unsupported or
   ambiguous saved destination settings must not silently enable printing.
 

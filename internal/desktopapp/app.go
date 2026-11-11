@@ -197,6 +197,7 @@ func (a *application) updateTrayMenu() {
 		fyne.NewMenuItem(statusText, nil),
 		fyne.NewMenuItem("Destination: "+destinationLabel(a.cfg.DestinationType), nil),
 		fyne.NewMenuItem("Printer port: "+strconv.Itoa(a.cfg.DefaultPrinterPort), nil),
+		fyne.NewMenuItem("Virtual TCP printer: "+virtualTCPStatus(a.cfg, a.server.VirtualTCPRunning()), nil),
 		fyne.NewMenuItem("Allowed origins: "+strconv.Itoa(len(a.cfg.AllowedOrigins)), nil),
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem("Quit", a.quit),
@@ -228,10 +229,11 @@ func (a *application) updateInfo() {
 	}
 
 	a.infoLabel.SetText(fmt.Sprintf(
-		"Destination: %s\nDefault printer port: %d\nDefault printer address: %s\nAllowed origins: %s",
+		"Destination: %s\nDefault printer port: %d\nDefault printer address: %s\nVirtual TCP printer: %s\nAllowed origins: %s",
 		destinationLabel(a.cfg.DestinationType),
 		a.cfg.DefaultPrinterPort,
 		displayValue(a.cfg.DefaultPrinterAddress, "Not set"),
+		virtualTCPStatus(a.cfg, a.server.VirtualTCPRunning()),
 		displayOriginsSummary(a.cfg.AllowedOrigins),
 	))
 	a.infoLabel.Refresh()
@@ -269,6 +271,10 @@ func (a *application) showSettings() {
 
 	labelaryCheck := widget.NewCheck("Enable Labelary previews", nil)
 	labelaryCheck.SetChecked(a.cfg.Preview.LabelaryEnabled)
+	virtualTCPCheck := widget.NewCheck("Enable LAN virtual printer on TCP port 9100", nil)
+	virtualTCPCheck.SetChecked(a.cfg.VirtualTCPEnabled)
+	virtualTCPDisclosure := widget.NewLabel("This unauthenticated listener binds to all IPv4 interfaces. Any device that can reach this computer may submit jobs (including through network routing or port forwarding). It is active only in Virtual mode. Each connection is one job; the sender must close the connection when done.")
+	virtualTCPDisclosure.Wrapping = fyne.TextWrapWord
 	labelWidthEntry := widget.NewEntry()
 	labelWidthEntry.SetText(strconv.FormatFloat(a.cfg.Preview.LabelWidthInches, 'f', -1, 64))
 	labelHeightEntry := widget.NewEntry()
@@ -307,6 +313,8 @@ func (a *application) showSettings() {
 			originsEntry,
 			"Website addresses allowed to use print-bridge from a browser. One per line, no page path.",
 		),
+		settingsFormItem("LAN virtual printer", container.NewVBox(virtualTCPCheck, virtualTCPDisclosure),
+			"Off by default. Port 9100 must be available. Enabling this allows network devices to submit raw jobs to this computer without authentication."),
 		settingsFormItem("Optional Labelary rendering", container.NewVBox(labelaryCheck, previewDisclosure),
 			"Rendering is off by default, works only in Virtual mode, and shares job contents with the Labelary service when enabled."),
 		settingsFormItem("Label width (inches)", labelWidthEntry, "Preview label width from greater than 0 through 15 inches."),
@@ -321,7 +329,7 @@ func (a *application) showSettings() {
 		}
 		nextCfg, err := settingsConfig(
 			a.cfg, httpPortEntry.Text, printerPortEntry.Text, printerAddressEntry.Text,
-			originsEntry.Text, destinationSelect.Selected, labelaryCheck.Checked,
+			originsEntry.Text, destinationSelect.Selected, virtualTCPCheck.Checked, labelaryCheck.Checked,
 			labelWidthEntry.Text, labelHeightEntry.Text, densitySelect.Selected,
 		)
 		if err != nil {
@@ -343,7 +351,7 @@ func (a *application) showSettings() {
 		}
 
 		errorLabel.SetText("")
-		a.setMessage("Settings saved. Listening on " + a.server.Status().Address)
+		a.setMessage("Settings saved. Listening on " + a.server.Status().Address + "; virtual TCP printer: " + virtualTCPStatus(nextCfg, a.server.VirtualTCPRunning()))
 		a.updateStatus()
 		settingsWindow.Close()
 	})
@@ -402,6 +410,7 @@ func (a *application) detailsText() string {
 		"  HTTP port: " + strconv.Itoa(a.cfg.HTTPPort),
 		"  Last listener error: " + statusError,
 		"  Destination: " + destinationLabel(a.cfg.DestinationType),
+		"  Virtual TCP printer: " + virtualTCPStatus(a.cfg, a.server.VirtualTCPRunning()),
 		"",
 		"Preview",
 		"  Labelary enabled: " + strconv.FormatBool(a.cfg.Preview.LabelaryEnabled),
@@ -423,6 +432,7 @@ func (a *application) detailsText() string {
 		"  GET /ping",
 		"  GET /status?host=<printer_host>&port=<printer_port>",
 		"  POST /print",
+		"  Raw TCP virtual printer: " + virtualTCPStatus(a.cfg, a.server.VirtualTCPRunning()),
 		"",
 		"Timeouts",
 		"  TCP connect timeout: " + server.DefaultConnectTimeout.String(),
@@ -471,6 +481,12 @@ func (a *application) helpText() string {
 		"Example: if the website is open at `http://localhost:3000/orders`, add `http://localhost:3000`.",
 		"",
 		"Only add websites you trust. If no origins are configured, websites cannot connect.",
+		"",
+		"## Send Jobs from a Network Device",
+		"- In Settings, enable the LAN virtual printer and select Virtual mode.",
+		"- Configure the sending app to use this computer's LAN IP address and TCP port 9100.",
+		"- The sender must close its TCP connection to finish each job. This listener does not authenticate clients.",
+		"- The listener is off by default and is not active in Physical mode. Check your firewall if the phone cannot connect.",
 		"",
 		"## Check These Values",
 		"- print-bridge address: `http://" + listener + "`",
@@ -548,6 +564,7 @@ func settingsConfig(
 	printerAddress string,
 	originsText string,
 	destination string,
+	virtualTCPEnabled bool,
 	labelaryEnabled bool,
 	labelWidthText string,
 	labelHeightText string,
@@ -586,11 +603,25 @@ func settingsConfig(
 	base.DefaultPrinterAddress = strings.TrimSpace(printerAddress)
 	base.AllowedOrigins = splitOrigins(originsText)
 	base.DestinationType = destinationType
+	base.VirtualTCPEnabled = virtualTCPEnabled
 	base.Preview = config.PreviewConfig{
 		LabelaryEnabled: labelaryEnabled, LabelWidthInches: labelWidth,
 		LabelHeightInches: labelHeight, PrintDensityDpmm: density,
 	}
 	return config.Normalize(base)
+}
+
+func virtualTCPStatus(cfg config.Config, running bool) string {
+	if !cfg.VirtualTCPEnabled {
+		return "Disabled"
+	}
+	if cfg.DestinationType != config.DestinationVirtual {
+		return "Enabled in Settings; active only in Virtual mode"
+	}
+	if running {
+		return "Listening on TCP port " + strconv.Itoa(server.VirtualTCPPort)
+	}
+	return "Enabled, but not listening"
 }
 
 func destinationLabel(destination string) string {

@@ -8,7 +8,7 @@ Read `01-business/constraints.md` and `03-architecture/decisions.md` alongside t
 flowchart LR
     subgraph "print-bridge (single binary)"
         UI[Fyne GUI\nSettings window + tray icon]
-        Core[HTTP Server\nGin router]
+        Core[HTTP API + shared destination flow]
         Store[Bounded session capture store]
         Inspector[Bundled browser inspector]
         Preview[Optional preview workers]
@@ -17,6 +17,7 @@ flowchart LR
     end
     Labelary[Labelary\nexternal service]
     Web[Web App\nbrowser JS] -- HTTP, localhost --> Core
+    Device[Network print client] -- Raw TCP, opt-in :9100 --> Core
     Core -- TCP, raw data --> Printer[(Network Printer)]
     Core -- Virtual mode --> Store
     Core --> Inspector
@@ -72,7 +73,9 @@ These values are defaults; do not hardcode them so tightly that they can't be ad
 - Rotating log file, local to the app's data directory (platform-appropriate: `~/Library/Application Support/PrintBridge/` on macOS, `%APPDATA%\PrintBridge\` on Windows). Defaults are 5 MiB per file and three backups.
 - Log integration API requests (`/ping`, `/status`, and `/print`): timestamp,
   endpoint, target host:port when applicable, outcome, and error detail. Do not
-  log captured payloads. Inspector requests are not written to this request log.
+  log captured payloads. The optional raw TCP virtual printer logs remote
+  targets, byte-count successes, and failure details under `/tcp/9100`, never
+  payloads. Inspector requests are not written to this request log.
 - Viewable live from within the app (see `05-ux/tray-app-spec.md`) — the user should not need to hunt through the filesystem to see recent activity.
 
 ## Virtual Mode architecture
@@ -99,6 +102,14 @@ cached preview, and clear routes to the same listener. VM-6 added the bundled
 interactive dashboard, with bounded polling and safe local payload inspection.
 VM-7 added optional, bounded asynchronous previews through a fixed HTTPS
 Labelary adapter; rendering is independent of capture success.
+
+An optional Virtual-mode TCP listener accepts raw LAN jobs on port 9100 when
+explicitly enabled in Settings. It treats each connection as one job, bounded
+by the capture job-size limit, a 30-second read deadline, and eight concurrent
+connections. It passes exact bytes to the same capture/classification/preview
+path as `/print`. The listener is unauthenticated and binds to all IPv4
+interfaces; it is disabled by default and never starts in Physical mode. See
+the [security model](security-model.md) and [ADR-007](decisions.md#adr-007-opt-in-lan-virtual-printer).
 
 ### Implemented capture foundation (VM-2)
 

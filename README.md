@@ -62,6 +62,14 @@ the external Labelary service for rendering; preview availability does not
 affect job capture. See [the Virtual Mode API and Inspector details](DOCS/04-api/virtual-mode.md)
 and [configuration options](DOCS/06-config/config-schema.md).
 
+Virtual Mode can also accept jobs directly from a network print client. Enable
+**LAN virtual printer** in Settings; it listens on this computer's TCP port
+`9100` on all IPv4 interfaces only while Virtual is selected. Configure the
+client with this computer's LAN IP and port `9100`; each connection must close
+to finish one job. This listener is unauthenticated, so any device that can
+reach the computer may submit jobs. Enable it only on a trusted network and
+check firewall/router rules; it is off by default.
+
 ## What It Does Not Do
 
 - Not affiliated with, endorsed by, sponsored by, or connected to any printer manufacturer.
@@ -156,7 +164,8 @@ Important limits:
 
 - CORS is browser-enforced access control, not general-purpose authentication.
 - Only trusted web app origins should be added to the allow-list.
-- The bridge should bind to localhost only.
+- The HTTP API and Inspector bind to localhost. The separate raw TCP virtual
+  printer is LAN-accessible only when explicitly enabled in Virtual Mode.
 - Any future token/API-key authentication would be a deliberate scope change.
 
 See [`DOCS/03-architecture/security-model.md`](DOCS/03-architecture/security-model.md) for the full model and accepted risks.
