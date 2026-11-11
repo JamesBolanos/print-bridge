@@ -109,3 +109,27 @@ conversion, PDF/binary submission, and an embedded ZPL renderer are deferred.
 Do not include payloads in rotating logs. Dashboard history access is separate
 from the integration CORS allow-list, as specified in the inspector access
 section of `security-model.md`. No API key is added to callers' print requests.
+
+---
+
+## ADR-007: Opt-in LAN virtual printer intake
+
+**Decision:** Virtual mode can optionally expose a raw TCP listener on port
+9100 for network print clients. The listener is disabled by default and is
+active only when both the opt-in setting and Virtual destination are selected.
+Each TCP connection is one job; clients signal completion by closing the
+connection. Received bytes go directly through the shared capture and optional
+preview flow without transformation or an HTTP round trip.
+
+**Security boundary:** The listener binds to all IPv4 interfaces and does not
+authenticate clients. CORS does not apply to raw TCP. Users must explicitly
+enable it and understand that reachable LAN clients can submit content for
+capture and, when Labelary is enabled, preview. The port, job size, connection
+count, and read time are bounded. This does not change the localhost-only
+binding of the HTTP API and Inspector.
+
+**Rationale:** Existing raw-print clients can use the Virtual destination and
+Inspector without introducing a second capture store or ZPL rendering flow.
+
+**Do not enable by default or add an automatic Physical fallback.** The
+listener must stop when Virtual mode is disabled or the app shuts down.

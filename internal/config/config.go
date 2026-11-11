@@ -25,7 +25,7 @@ const (
 	DefaultHTTPPort = 8080
 	// DefaultPrinterPort is the common raw TCP printing port.
 	DefaultPrinterPort = 9100
-	// CurrentVersion identifies the persisted destination/preview schema.
+	// CurrentVersion identifies the persisted destination, preview, and intake schema.
 	CurrentVersion = 1
 	// DestinationPhysical selects raw TCP printing.
 	DestinationPhysical = "physical"
@@ -44,6 +44,7 @@ var DefaultAllowedOrigins = []string{
 type Config struct {
 	ConfigVersion         int           `json:"configVersion"`
 	DestinationType       string        `json:"destinationType"`
+	VirtualTCPEnabled     bool          `json:"virtualTCPEnabled"`
 	Preview               PreviewConfig `json:"preview"`
 	HTTPPort              int           `json:"httpPort"`
 	DefaultPrinterPort    int           `json:"defaultPrinterPort"`

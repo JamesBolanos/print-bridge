@@ -25,6 +25,7 @@ New installations create:
 {
   "configVersion": 1,
   "destinationType": "physical",
+  "virtualTCPEnabled": false,
   "preview": {
     "labelaryEnabled": false,
     "labelWidthInches": 4,
@@ -42,6 +43,7 @@ New installations create:
 |---|---|---|---|
 | `configVersion` | integer | `1` | Current schema; valid unversioned/version-0 files migrate in memory |
 | `destinationType` | string | `physical` for new/legacy files | Version 1 requires exactly `physical` or `virtual` |
+| `virtualTCPEnabled` | boolean | `false` | Enables the unauthenticated raw TCP virtual printer on port 9100 only while destination is Virtual; disabled by default and port must be available |
 | `preview` | object | As above | Optional; missing preferences get defaults, explicit invalid/null values are rejected |
 | `httpPort` | integer | `8080` | 1024–65535; port must be available at startup |
 | `defaultPrinterPort` | integer | `9100` | 1–65535; supplies omitted/zero request ports |
@@ -57,6 +59,12 @@ Users can add or remove origins in Settings.
 - `destinationType` is global. It routes both
   `/print` and `/status`; a request cannot override it. Switching destination
   preserves the configured physical address and port.
+- `virtualTCPEnabled` exposes a separate raw TCP intake on all IPv4 interfaces
+  only when `destinationType` is `virtual`. It is opt-in and disabled by
+  default; reachable LAN clients can submit jobs without authentication.
+  Connections are one job each, capped at 1 MiB, eight concurrent connections,
+  and a 30-second read timeout. The listener stops on Physical mode and app
+  shutdown. This setting does not alter HTTP API binding or CORS.
 - `labelaryEnabled` is a boolean, false by default. The Settings control
   discloses that rendering sends label contents to an external service. VM-7
   prevents new submissions and cancels pending work when disabled.
@@ -117,10 +125,12 @@ disables Settings Save during recovery. Repair the file and restart the app.
 There is no implicit reset to Physical or destructive repair button. File read
 errors are returned as errors, not mistaken for a missing first-run config.
 
-A valid Virtual configuration starts the loopback listener and routes `/print`
+A valid Virtual configuration starts the loopback HTTP listener and routes `/print`
 to session capture. `/status` reports capture readiness without probing a
 printer. The Settings destination selector changes the mode and restarts the
 listener while preserving the configured physical printer address and port.
+The optional TCP virtual printer runs only when enabled and Virtual mode is
+selected.
 
 ## Data outside configuration
 
