@@ -10,15 +10,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    labels:
-      - "dependencies"
-      - "gomod"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows/"
     schedule:
       interval: "weekly"
-    labels:
-      - "dependencies"
-      - "github-actions"
